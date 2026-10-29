@@ -1,14 +1,10 @@
 pluginManagement {
     repositories {
-        maven { url "https://maven.fabricmc.net/" }
-        maven { url "https://maven.architectury.dev/" }
-        maven { url "https://maven.minecraftforge.net/" }
+        maven { url = 'https://maven.fabricmc.net/' }
         gradlePluginPortal()
+        mavenCentral()
     }
 }
+rootProject.name = 'WilderNature'
 
-include("common")
-include("fabric")
-include("neoforge")
-
-rootProject.name = "WilderNature"
+includeBuild('../letsdo-foundation')

@@ -7,7 +7,7 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
-public class AlertParticle extends TextureSheetParticle {
+public class AlertParticle extends SingleQuadParticle {
     private static final int FADE_IN_DURATION = 3;
     private static final float START_SCALE = 0.06F;
     private static final float MAX_SCALE = 0.14F;
@@ -15,8 +15,8 @@ public class AlertParticle extends TextureSheetParticle {
     private final float targetAlpha;
     private float previousQuadSize;
 
-    protected AlertParticle(ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
-        super(level, x, y, z, velocityX, velocityY, velocityZ);
+    protected AlertParticle(ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.client.renderer.texture.TextureAtlasSprite initialSprite) {
+        super(level, x, y, z, velocityX, velocityY, velocityZ, initialSprite);
         this.lifetime = 14;
         this.gravity = 0.0F;
         this.hasPhysics = false;
@@ -67,8 +67,8 @@ public class AlertParticle extends TextureSheetParticle {
     }
 
     @Override
-    public @NotNull ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
+    public @NotNull SingleQuadParticle.Layer getLayer() {
+        return SingleQuadParticle.Layer.TRANSLUCENT;
     }
 
     public static class Provider implements ParticleProvider<SimpleParticleType> {
@@ -79,12 +79,12 @@ public class AlertParticle extends TextureSheetParticle {
         }
 
         @Override
-        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.util.RandomSource random) {
             if (!PlatformHelper.isEmoteParticlesEnabled()) {
                 return null;
             }
-            AlertParticle particle = new AlertParticle(level, x, y, z, velocityX, velocityY, velocityZ);
-            particle.pickSprite(this.spriteSet);
+            AlertParticle particle = new AlertParticle(level, x, y, z, velocityX, velocityY, velocityZ, this.spriteSet.get(random));
+            particle.setSprite(this.spriteSet.get(random));
             return particle;
         }
     }

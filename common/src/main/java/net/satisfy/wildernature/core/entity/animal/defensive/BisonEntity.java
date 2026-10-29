@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.defensive;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.satisfy.wildernature.platform.PlatformHelper;
 import net.minecraft.core.particles.ParticleTypes;
@@ -18,7 +20,7 @@ import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Wolf;
+import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -94,7 +96,7 @@ public class BisonEntity extends Animal {
     }
 
     public static @NotNull AttributeSupplier.Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MAX_HEALTH, 32.0D)
                 .add(Attributes.ATTACK_DAMAGE, 6.0D)
                 .add(Attributes.ATTACK_SPEED, 1.0D)
@@ -223,7 +225,7 @@ public class BisonEntity extends Animal {
 
         this.restTicks++;
 
-        if (this.level().isNight()) {
+        if (this.level().isDarkOutside()) {
             this.setGrazing(false);
             if (this.restTicks >= SLEEP_START_DELAY) {
                 this.setSleeping(true);
@@ -347,7 +349,7 @@ public class BisonEntity extends Animal {
         } else {
             walkSpeed = 0.0F;
         }
-        this.walkAnimation.update(walkSpeed, 0.2F);
+        this.walkAnimation.update(walkSpeed, 0.2F, 1.0F);
     }
 
     public boolean isAttacking() {
@@ -527,7 +529,7 @@ public class BisonEntity extends Animal {
         hurtByTargetGoal.setAlertOthers();
         this.targetSelector.addGoal(1, hurtByTargetGoal);
 
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true, livingEntity -> livingEntity instanceof Player player && BisonEntity.this.isValidThreat(player)) {
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true, (livingEntity, targetLevel) -> livingEntity instanceof Player player && BisonEntity.this.isValidThreat(player)) {
             @Override
             public boolean canUse() {
                 return !BisonEntity.this.isPeacefulDifficulty() && super.canUse();
@@ -543,7 +545,7 @@ public class BisonEntity extends Animal {
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob otherParent) {
-        return EntityTypeRegistry.BISON.get().create(level);
+        return EntityTypeRegistry.BISON.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -567,8 +569,8 @@ public class BisonEntity extends Animal {
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float damageAmount) {
-        boolean wasHurt = super.hurt(damageSource, damageAmount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float damageAmount) {
+        boolean wasHurt = super.hurtServer(serverLevel, damageSource, damageAmount);
         if (wasHurt && !this.level().isClientSide() && !this.isPeacefulDifficulty()) {
             this.setLastHurtTime(this.level().getGameTime());
             Entity sourceEntity = damageSource.getEntity();
@@ -583,9 +585,9 @@ public class BisonEntity extends Animal {
     }
 
     @Override
-    public boolean doHurtTarget(Entity targetEntity) {
+    public boolean doHurtTarget(net.minecraft.server.level.ServerLevel serverLevel, Entity targetEntity) {
         float attackDamage = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE);
-        boolean wasSuccessful = targetEntity.hurt(this.damageSources().mobAttack(this), attackDamage);
+        boolean wasSuccessful = targetEntity.hurtOrSimulate(this.damageSources().mobAttack(this), attackDamage);
 
         if (wasSuccessful) {
             this.attackAnimationTicks = ATTACK_DURATION;
@@ -596,7 +598,7 @@ public class BisonEntity extends Animal {
                 if (knockbackDirection.lengthSqr() > 1.0E-4D) {
                     Vec3 knockbackVector = knockbackDirection.normalize().scale(2.5D);
                     livingEntity.push(knockbackVector.x, 0.6D, knockbackVector.z);
-                    livingEntity.hurtMarked = true;
+                    livingEntity.syncVelocity = true;
                 }
             }
         }
@@ -605,7 +607,7 @@ public class BisonEntity extends Animal {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
+    public void addAdditionalSaveData(ValueOutput compound) {
         super.addAdditionalSaveData(compound);
         compound.putBoolean("Attacking", this.isAttacking());
         compound.putBoolean("Angry", this.isAngry());
@@ -628,26 +630,26 @@ public class BisonEntity extends Animal {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
+    public void readAdditionalSaveData(ValueInput compound) {
         super.readAdditionalSaveData(compound);
-        this.setAttacking(compound.getBoolean("Attacking"));
-        this.setAngry(compound.getBoolean("Angry"));
-        this.setAlert(compound.getBoolean("Alert"));
-        this.setSnorting(compound.getBoolean("Snorting"));
-        this.setCharging(compound.getBoolean("Charging"));
-        this.setGrazing(compound.getBoolean("Grazing"));
-        this.setSleeping(compound.getBoolean("Sleeping"));
-        this.setLastHurtTime(compound.getLong("LastHurtTime"));
-        this.attackAnimationTicks = compound.getInt("AttackAnimationTicks");
-        this.alertTicks = compound.getInt("AlertTicks");
-        this.snortTicks = compound.getInt("SnortTicks");
-        this.chargeTicks = compound.getInt("ChargeTicks");
-        this.chargeCooldownTicks = compound.getInt("ChargeCooldownTicks");
-        this.calmDownTicks = compound.getInt("CalmDownTicks");
-        this.babyProtectCacheTicks = compound.getInt("BabyProtectCacheTicks");
-        this.nearbyBabyCached = compound.getBoolean("NearbyBabyCached");
-        this.grazeTicks = compound.getInt("GrazeTicks");
-        this.restTicks = compound.getInt("RestTicks");
+        this.setAttacking(compound.getBooleanOr("Attacking", false));
+        this.setAngry(compound.getBooleanOr("Angry", false));
+        this.setAlert(compound.getBooleanOr("Alert", false));
+        this.setSnorting(compound.getBooleanOr("Snorting", false));
+        this.setCharging(compound.getBooleanOr("Charging", false));
+        this.setGrazing(compound.getBooleanOr("Grazing", false));
+        this.setSleeping(compound.getBooleanOr("Sleeping", false));
+        this.setLastHurtTime(compound.getLongOr("LastHurtTime", 0L));
+        this.attackAnimationTicks = compound.getIntOr("AttackAnimationTicks", 0);
+        this.alertTicks = compound.getIntOr("AlertTicks", 0);
+        this.snortTicks = compound.getIntOr("SnortTicks", 0);
+        this.chargeTicks = compound.getIntOr("ChargeTicks", 0);
+        this.chargeCooldownTicks = compound.getIntOr("ChargeCooldownTicks", 0);
+        this.calmDownTicks = compound.getIntOr("CalmDownTicks", 0);
+        this.babyProtectCacheTicks = compound.getIntOr("BabyProtectCacheTicks", 0);
+        this.nearbyBabyCached = compound.getBooleanOr("NearbyBabyCached", false);
+        this.grazeTicks = compound.getIntOr("GrazeTicks", 0);
+        this.restTicks = compound.getIntOr("RestTicks", 0);
         this.setAttacking(this.attackAnimationTicks > 0);
     }
 }

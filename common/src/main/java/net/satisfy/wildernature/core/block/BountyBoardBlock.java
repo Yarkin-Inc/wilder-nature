@@ -4,7 +4,7 @@ import com.mojang.serialization.MapCodec;
 import net.satisfy.foundation.overlay.BlockNotice;
 import net.satisfy.wildernature.platform.PlatformHelper;
 import dev.architectury.registry.menu.MenuRegistry;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -29,7 +29,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.BooleanOp;
@@ -51,12 +51,11 @@ import java.util.*;
 
 public class BountyBoardBlock extends BaseEntityBlock {
     public static final EnumProperty<Part> PART = EnumProperty.create("part", Part.class);
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     private static final VoxelShape SHAPE_BOTTOM_LEFT = makeBottomLeftShape();
     private static final VoxelShape SHAPE_BOTTOM_RIGHT = makeBottomRightShape();
     private static final VoxelShape SHAPE_TOP_LEFT = makeTopLeftShape();
     private static final VoxelShape SHAPE_TOP_RIGHT = makeTopRightShape();
-    public static final MapCodec<BountyBoardBlock> CODEC = simpleCodec(BountyBoardBlock::new);
     public static final Map<Direction, Map<Part, VoxelShape>> SHAPE = Util.make(new HashMap<>(), map -> {
         for (Direction direction : Direction.Plane.HORIZONTAL.stream().toList()) {
             Map<Part, VoxelShape> partShapeMap = new HashMap<>();
@@ -73,10 +72,7 @@ public class BountyBoardBlock extends BaseEntityBlock {
         this.registerDefaultState(this.stateDefinition.any().setValue(PART, Part.BOTTOM_LEFT).setValue(FACING, Direction.NORTH));
     }
 
-    @Override
-    protected @NotNull MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
+
 
     private static VoxelShape makeBottomLeftShape() {
         VoxelShape shape = Shapes.empty();
@@ -150,12 +146,7 @@ public class BountyBoardBlock extends BaseEntityBlock {
                 && world.getBlockState(pos.relative(direction.getClockWise()).above()).canBeReplaced();
     }
 
-    @Override
-    public void onRemove(BlockState state, Level world, BlockPos pos, BlockState newState, boolean isMoving) {
-        state.getBlock();
-        newState.getBlock();
-        super.onRemove(state, world, pos, newState, isMoving);
-    }
+
 
     private BlockPos getBasePos(BlockState state, BlockPos pos) {
         Part part = state.getValue(PART);
@@ -220,9 +211,9 @@ public class BountyBoardBlock extends BaseEntityBlock {
 
         world.blockEvent(basePos, this, BountyBoardBlockEntity.WOBBLE_EVENT, 0);
         MenuRegistry.openExtendedMenu(serverPlayer, menuProvider, buffer -> {
-            BountyBoardSavedData savedData = BountyBoardSavedData.get(serverPlayer.serverLevel());
+            BountyBoardSavedData savedData = BountyBoardSavedData.get(serverPlayer.level());
             PlayerBountyData playerBountyData = savedData.getPlayerBountyData(serverPlayer.getUUID());
-            List<BountyDefinition> dailyBounties = BountyManager.getBoardBounties(serverPlayer.serverLevel(), playerBountyData);
+            List<BountyDefinition> dailyBounties = BountyManager.getBoardBounties(serverPlayer.level(), playerBountyData);
 
             BountyBoardMenu.writeBounties(buffer, dailyBounties, new ArrayList<>(playerBountyData.getAbandonedBounties()));
 

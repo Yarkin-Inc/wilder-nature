@@ -3,7 +3,7 @@ package net.satisfy.wildernature.core.mixin;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
-import net.minecraft.world.entity.animal.Cat;
+import net.minecraft.world.entity.animal.feline.Cat;
 import net.minecraft.world.level.Level;
 import net.satisfy.wildernature.core.entity.animal.tameable.DogEntity;
 import org.spongepowered.asm.mixin.Mixin;

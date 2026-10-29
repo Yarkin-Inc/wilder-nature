@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.CassowaryRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -13,7 +13,7 @@ import net.satisfy.wildernature.client.model.entity.animation.CassowaryAnimation
 import net.satisfy.wildernature.core.entity.animal.defensive.CassowaryEntity;
 import org.jetbrains.annotations.NotNull;
 
-public class CassowaryModel<T extends Entity> extends HierarchicalModel<T> {
+public class CassowaryModel<T extends CassowaryRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("cassowary"), "main");
 
     private final ModelPart root;
@@ -21,6 +21,8 @@ public class CassowaryModel<T extends Entity> extends HierarchicalModel<T> {
     private final ModelPart head;
 
     public CassowaryModel(ModelPart root) {
+        // "root" animation channels must use the same pivot that setupAnim resets.
+        super(root.getChild("root"));
         this.root = root.getChild("root");
         this.neck = this.root.getChild("neck");
         this.head = this.neck.getChild("head");
@@ -51,10 +53,15 @@ public class CassowaryModel<T extends Entity> extends HierarchicalModel<T> {
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root.getAllParts().forEach(ModelPart::resetPose);
 
-        CassowaryEntity cassowaryEntity = (CassowaryEntity) entity;
+        T cassowaryEntity = entity;
 
         this.animate(cassowaryEntity.idleAnimationState, CassowaryAnimation.idle, ageInTicks, 1.0F);
         this.animateWalk(CassowaryAnimation.walk, limbSwing, limbSwingAmount, 2.0F, 2.5F);
@@ -69,13 +76,7 @@ public class CassowaryModel<T extends Entity> extends HierarchicalModel<T> {
         }
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.root.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.root;
-    }
+
+
 }

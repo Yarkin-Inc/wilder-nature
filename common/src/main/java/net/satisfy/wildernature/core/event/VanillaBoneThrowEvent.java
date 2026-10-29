@@ -1,6 +1,6 @@
 package net.satisfy.wildernature.core.event;
 
-import dev.architectury.event.CompoundEventResult;
+import dev.architectury.event.EventResult;
 import dev.architectury.event.events.common.InteractionEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -16,16 +16,16 @@ public final class VanillaBoneThrowEvent {
         InteractionEvent.RIGHT_CLICK_ITEM.register(VanillaBoneThrowEvent::onRightClickItem);
     }
 
-    private static CompoundEventResult<ItemStack> onRightClickItem(Player player, InteractionHand hand) {
+    private static EventResult onRightClickItem(Player player, InteractionHand hand) {
         ItemStack heldStack = player.getItemInHand(hand);
         if (!heldStack.is(Items.BONE)) {
-            return CompoundEventResult.pass();
+            return EventResult.pass();
         }
         if (!player.isShiftKeyDown()) {
-            return CompoundEventResult.pass();
+            return EventResult.pass();
         }
         if (!(player.level() instanceof ServerLevel serverLevel)) {
-            return CompoundEventResult.interruptFalse(heldStack);
+            return EventResult.interruptFalse();
         }
 
         ItemStack thrownStack = heldStack.copyWithCount(1);
@@ -40,7 +40,7 @@ public final class VanillaBoneThrowEvent {
             heldStack.shrink(1);
         }
 
-        return CompoundEventResult.interruptTrue(player.getItemInHand(hand));
+        return EventResult.interruptTrue();
     }
 
     private VanillaBoneThrowEvent() {

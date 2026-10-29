@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.TurkeyRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -13,12 +13,13 @@ import net.satisfy.wildernature.client.model.entity.animation.TurkeyAnimation;
 import net.satisfy.wildernature.core.entity.animal.neutral.TurkeyEntity;
 import org.jetbrains.annotations.NotNull;
 
-public class TurkeyModel<T extends Entity> extends HierarchicalModel<T> {
+public class TurkeyModel<T extends TurkeyRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("turkeymodel"), "main");
 
     private final ModelPart root;
 
     public TurkeyModel(ModelPart root) {
+        super(root);
         this.root = root;
     }
 
@@ -62,20 +63,19 @@ public class TurkeyModel<T extends Entity> extends HierarchicalModel<T> {
     }
 
     @Override
-    public void setupAnim(Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-        var turkey = ((TurkeyEntity) entity);
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
+        T turkey = entity;
         this.root().getAllParts().forEach(ModelPart::resetPose);
         animateWalk(TurkeyAnimation.walk, limbSwing, limbSwingAmount, 2f, 2.5f);
         animate(turkey.attackAnimationState, TurkeyAnimation.attack, ageInTicks);
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int k) {
-        root.render(poseStack, vertexConsumer, packedLight, packedOverlay, k);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return root;
-    }
+
+
 }

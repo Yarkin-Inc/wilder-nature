@@ -25,17 +25,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class BurrowBlock extends BaseEntityBlock {
-    public static final MapCodec<BurrowBlock> CODEC = simpleCodec(BurrowBlock::new);
 
     public BurrowBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any());
     }
 
-    @Override
-    protected @NotNull MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
+
 
 
     @Override
@@ -72,22 +68,7 @@ public class BurrowBlock extends BaseEntityBlock {
         return InteractionResult.CONSUME;
     }
 
-    @Override
-    protected void onRemove(BlockState blockState, Level level, BlockPos blockPos, BlockState newBlockState, boolean movedByPiston) {
-        if (!blockState.is(newBlockState.getBlock())) {
-            BlockEntity blockEntity = level.getBlockEntity(blockPos);
-            if (blockEntity instanceof BurrowBlockEntity burrowBlockEntity) {
-                Containers.dropContents(level, blockPos, burrowBlockEntity);
-                level.updateNeighbourForOutputSignal(blockPos, this);
 
-                if (level instanceof ServerLevel serverLevel) {
-                    serverLevel.playSound(null, blockPos, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.55F, 0.8F);
-                }
-            }
-        }
-
-        super.onRemove(blockState, level, blockPos, newBlockState, movedByPiston);
-    }
 
     @Override
     protected boolean hasAnalogOutputSignal(BlockState blockState) {
@@ -95,7 +76,13 @@ public class BurrowBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState blockState, Level level, BlockPos blockPos) {
+    protected int getAnalogOutputSignal(BlockState blockState, Level level, BlockPos blockPos, net.minecraft.core.Direction direction) {
         return AbstractContainerMenu.getRedstoneSignalFromBlockEntity(level.getBlockEntity(blockPos));
+    }
+    @Override
+    protected void affectNeighborsAfterRemoval(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, boolean movedByPiston) {
+        level.updateNeighbourForOutputSignal(pos, this);
+        level.playSound(null, pos, net.minecraft.sounds.SoundEvents.GRASS_PLACE, net.minecraft.sounds.SoundSource.BLOCKS, 0.55F, 0.8F);
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
     }
 }

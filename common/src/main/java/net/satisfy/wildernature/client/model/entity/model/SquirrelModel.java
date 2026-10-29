@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.SquirrelRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -16,13 +16,14 @@ import net.satisfy.wildernature.core.entity.animal.neutral.SquirrelEntity;
 import org.jetbrains.annotations.NotNull;
 
 @Environment(EnvType.CLIENT)
-public class SquirrelModel extends HierarchicalModel<SquirrelEntity> {
+public class SquirrelModel<T extends SquirrelRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("squirrel"), "main");
 
     private final ModelPart squirrel;
     public final ModelPart head;
 
     public SquirrelModel(ModelPart root) {
+        super(root);
         this.squirrel = root.getChild("squirrel");
         this.head = this.squirrel.getChild("hips").getChild("torso").getChild("h_head");
     }
@@ -62,7 +63,12 @@ public class SquirrelModel extends HierarchicalModel<SquirrelEntity> {
     }
 
     @Override
-    public void setupAnim(SquirrelEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         this.head.yRot += netHeadYaw * Mth.DEG_TO_RAD;
@@ -77,13 +83,7 @@ public class SquirrelModel extends HierarchicalModel<SquirrelEntity> {
         this.animate(entity.idleAnimationState, SquirrelAnimation.idle, ageInTicks, 1.0F);
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.squirrel.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.squirrel;
-    }
+
+
 }

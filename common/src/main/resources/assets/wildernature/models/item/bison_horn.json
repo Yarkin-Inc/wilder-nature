@@ -72,13 +72,5 @@
         0.68
       ]
     }
-  },
-  "overrides": [
-    {
-      "predicate": {
-        "using": 1
-      },
-      "model": "wildernature:item/tooting_bison_horn"
-    }
-  ]
+  }
 }

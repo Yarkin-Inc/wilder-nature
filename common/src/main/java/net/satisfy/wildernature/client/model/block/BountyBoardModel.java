@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.block;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -10,7 +10,7 @@ import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.world.entity.Entity;
 import net.satisfy.wildernature.WilderNature;
 
-public class BountyBoardModel<T extends Entity> extends EntityModel<T> {
+public class BountyBoardModel extends Model<net.satisfy.wildernature.client.render.block.BountyBoardRenderer.State> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("bounty_board"), "main");
     private static final float[][] CONTRACTS = {
             {0, 32, 3.6F, -8.45F, 11, 8},
@@ -30,6 +30,7 @@ public class BountyBoardModel<T extends Entity> extends EntityModel<T> {
     private final ModelPart[] contractParts = new ModelPart[CONTRACT_COUNT];
 
     public BountyBoardModel(ModelPart root) {
+        super(root, net.minecraft.client.renderer.rendertype.RenderTypes::entityCutout);
         this.board = root.getChild("board");
         this.contracts = root.getChild("contracts");
         for (int index = 0; index < CONTRACT_COUNT; index++) {
@@ -69,14 +70,11 @@ public class BountyBoardModel<T extends Entity> extends EntityModel<T> {
         }
     }
 
-    @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
 
-    }
+
 
     @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int k) {
-        board.render(poseStack, vertexConsumer, packedLight, packedOverlay, k);
-        contracts.render(poseStack, vertexConsumer, packedLight, packedOverlay, k);
+    public void setupAnim(net.satisfy.wildernature.client.render.block.BountyBoardRenderer.State state) {
+        setContracts(state.contracts, state.time, state.wobble, state.phase);
     }
 }

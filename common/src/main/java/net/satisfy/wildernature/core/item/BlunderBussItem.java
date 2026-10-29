@@ -6,14 +6,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ProjectileWeaponItem;
-import net.minecraft.world.item.UseAnim;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.satisfy.wildernature.core.entity.projectile.BulletEntity;
@@ -40,8 +40,8 @@ public class BlunderBussItem extends ProjectileWeaponItem {
     private final boolean ignoreInvulnerability;
     private final Ingredient repairMaterial;
 
-    public BlunderBussItem() {
-        super(new Properties().durability(DEFAULT_DURABILITY));
+    public BlunderBussItem(Properties properties) {
+        super(properties.durability(DEFAULT_DURABILITY).repairable(Items.IRON_INGOT));
         this.bonusDamage = DEFAULT_BONUS_DAMAGE;
         this.damageMultiplier = DEFAULT_DAMAGE_MULTIPLIER;
         this.fireDelay = DEFAULT_FIRE_DELAY;
@@ -52,7 +52,7 @@ public class BlunderBussItem extends ProjectileWeaponItem {
     }
 
     @Override
-    public @NotNull InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand) {
+    public @NotNull InteractionResult use(Level world, Player player, InteractionHand hand) {
         ItemStack gun = player.getItemInHand(hand);
         ItemStack ammo = player.getProjectile(gun);
 
@@ -62,7 +62,7 @@ public class BlunderBussItem extends ProjectileWeaponItem {
             }
 
             if (ammo.getItem() instanceof AmmunitionItem bulletItem) {
-                if (!world.isClientSide) {
+                if (!world.isClientSide()) {
                     boolean bulletFree = player.getAbilities().instabuild || !shouldConsumeAmmo();
 
                     shoot(world, player, ammo, bulletItem);
@@ -75,7 +75,7 @@ public class BlunderBussItem extends ProjectileWeaponItem {
 
                 player.awardStat(Stats.ITEM_USED.get(this));
 
-                player.getCooldowns().addCooldown(this, getFireDelay());
+                player.getCooldowns().addCooldown(player.getItemInHand(hand), getFireDelay());
 
                 if (world instanceof ServerLevel serverWorld) {
                     double particleX = player.getX() + player.getLookAngle().x * 2.5;
@@ -84,14 +84,14 @@ public class BlunderBussItem extends ProjectileWeaponItem {
 
                     serverWorld.sendParticles(ParticleTypes.SMALL_FLAME, particleX, particleY, particleZ, 5, 0.1, 0.1, 0.1, 0.01);
                     serverWorld.sendParticles(ParticleTypes.SMOKE, particleX, particleY, particleZ, 10, 0.1, 0.1, 0.1, 0.01);
-                    serverWorld.getServer().tell(new TickTask(serverWorld.getServer().getTickCount() + 40, () -> world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEventRegistry.BLUNDERBUSS_LOAD.get(), SoundSource.PLAYERS, 0.5F, 1.0F)));                }
+                    net.satisfy.wildernature.core.util.ServerTasks.after(serverWorld.getServer(), 40, () -> world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEventRegistry.BLUNDERBUSS_LOAD.get(), SoundSource.PLAYERS, 0.5F, 1.0F));                }
 
-                return InteractionResultHolder.consume(gun);
+                return InteractionResult.CONSUME; //gun);
             }
         } else {
-            return InteractionResultHolder.fail(gun);
+            return InteractionResult.FAIL; //gun);
         }
-        return InteractionResultHolder.pass(gun);
+        return InteractionResult.PASS; //gun);
     }
 
     protected void shoot(Level world, Player player, ItemStack ammo, AmmunitionItem bulletItem) {
@@ -148,14 +148,11 @@ public class BlunderBussItem extends ProjectileWeaponItem {
     }
 
     @Override
-    public @NotNull UseAnim getUseAnimation(ItemStack stack) {
-        return UseAnim.BOW;
+    public @NotNull ItemUseAnimation getUseAnimation(ItemStack stack) {
+        return ItemUseAnimation.BOW;
     }
 
-    @Override
-    public int getEnchantmentValue() {
-        return 0;
-    }
+
 
     @Override
     public @NotNull Predicate<ItemStack> getAllSupportedProjectiles() {
@@ -171,8 +168,5 @@ public class BlunderBussItem extends ProjectileWeaponItem {
     protected void shootProjectile(LivingEntity livingEntity, Projectile projectile, int i, float f, float g, float h, @Nullable LivingEntity livingEntity2) {
     }
 
-    @Override
-    public boolean isValidRepairItem(ItemStack toRepair, ItemStack repair) {
-        return repairMaterial.test(repair) || super.isValidRepairItem(toRepair, repair);
-    }
+
 }

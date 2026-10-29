@@ -17,12 +17,7 @@ public class RedWolfTrophyData extends SavedData {
 
     public static RedWolfTrophyData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
-            new SavedData.Factory<>(
-                RedWolfTrophyData::new,
-                RedWolfTrophyData::load,
-                DataFixTypes.SAVED_DATA_RANDOM_SEQUENCES
-            ),
-            DATA_NAME
+            new net.minecraft.world.level.saveddata.SavedDataType<>(net.satisfy.wildernature.WilderNature.identifier(DATA_NAME), RedWolfTrophyData::new, CompoundTag.CODEC.xmap(RedWolfTrophyData::load, data -> data.save(new CompoundTag())), null)
         );
     }
 
@@ -35,19 +30,18 @@ public class RedWolfTrophyData extends SavedData {
         setDirty();
     }
 
-    @Override
-    public @NotNull CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+    public @NotNull CompoundTag save(CompoundTag tag) {
         CompoundTag lastUsedTag = new CompoundTag();
         lastUsed.forEach((pos, time) -> lastUsedTag.putLong(posToKey(pos), time));
         tag.put("lastUsed", lastUsedTag);
         return tag;
     }
 
-    private static RedWolfTrophyData load(CompoundTag tag, HolderLookup.Provider provider) {
+    private static RedWolfTrophyData load(CompoundTag tag) {
         RedWolfTrophyData data = new RedWolfTrophyData();
-        CompoundTag lastUsedTag = tag.getCompound("lastUsed");
-        for (String key : lastUsedTag.getAllKeys()) {
-            data.lastUsed.put(keyToPos(key), lastUsedTag.getLong(key));
+        CompoundTag lastUsedTag = tag.getCompoundOrEmpty("lastUsed");
+        for (String key : lastUsedTag.keySet()) {
+            data.lastUsed.put(keyToPos(key), lastUsedTag.getLongOr(key, 0L));
         }
         return data;
     }

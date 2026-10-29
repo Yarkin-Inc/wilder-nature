@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.DogRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -13,13 +13,14 @@ import net.satisfy.wildernature.core.entity.animal.tameable.DogEntity;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
-public class DogModel<T extends DogEntity> extends HierarchicalModel<T> {
+public class DogModel<T extends DogRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("dog"), "main");
 
     private final ModelPart root;
     private final ModelPart head;
 
     public DogModel(ModelPart modelPart) {
+        super(modelPart);
         this.root = modelPart.getChild("dog");
         this.head = this.root.getChild("head");
     }
@@ -57,18 +58,17 @@ public class DogModel<T extends DogEntity> extends HierarchicalModel<T> {
         return LayerDefinition.create(meshDefinition, 64, 64);
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.root.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
+
+
+
 
     @Override
-    public @NotNull ModelPart root() {
-        return this.root;
-    }
-
-    @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         this.head.yRot = netHeadYaw * ((float) Math.PI / 180F);

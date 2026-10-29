@@ -11,7 +11,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrowableItemProjectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -23,7 +23,7 @@ public class ThrownBoneEntity extends ThrowableItemProjectile {
     private static final float DAMPING_FACTOR = 0.35F;
 
     public ThrownBoneEntity(Level level, LivingEntity owner) {
-        super(EntityTypeRegistry.BONE.get(), owner, level);
+        super(EntityTypeRegistry.BONE.get(), owner, level, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BONE));
     }
 
     public ThrownBoneEntity(EntityType<? extends ThrownBoneEntity> entityType, Level level) {
@@ -59,7 +59,7 @@ public class ThrownBoneEntity extends ThrowableItemProjectile {
 
         this.setDeltaMovement(velocityX, velocityY, velocityZ);
 
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WOOD_HIT, SoundSource.NEUTRAL, 0.9F, 1.2F);
         }
     }

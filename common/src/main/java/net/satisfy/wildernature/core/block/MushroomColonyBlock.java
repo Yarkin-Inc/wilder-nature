@@ -5,7 +5,7 @@ import dev.architectury.platform.Platform;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.tags.FluidTags;
@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.function.Function;
 
 public class MushroomColonyBlock extends BushBlock implements BonemealableBlock {
-    public static final MapCodec<MushroomColonyBlock> CODEC = simpleCodec(properties -> new MushroomColonyBlock(properties, randomSource -> List.of()));
     public static final IntegerProperty AGE = IntegerProperty.create("age", 0, 4);
     public static final IntegerProperty COLONY_AGE = AGE;
 
@@ -50,15 +49,12 @@ public class MushroomColonyBlock extends BushBlock implements BonemealableBlock 
     private final Function<RandomSource, List<ItemStack>> harvestDropFunction;
 
     public MushroomColonyBlock(BlockBehaviour.Properties properties, Function<RandomSource, List<ItemStack>> harvestDropFunction) {
-        super(properties.noCollission().instabreak().sound(SoundType.CROP).randomTicks());
+        super(properties.noCollision().instabreak().sound(SoundType.CROP).randomTicks());
         this.harvestDropFunction = harvestDropFunction;
         this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0));
     }
 
-    @Override
-    protected @NotNull MapCodec<? extends BushBlock> codec() {
-        return CODEC;
-    }
+
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
@@ -116,8 +112,8 @@ public class MushroomColonyBlock extends BushBlock implements BonemealableBlock 
             return InteractionResult.PASS;
         }
 
-        if (!level.isClientSide) {
-            for (ItemStack dropStack : this.harvestDropFunction.apply(level.random)) {
+        if (!level.isClientSide()) {
+            for (ItemStack dropStack : this.harvestDropFunction.apply(level.getRandom())) {
                 if (!dropStack.isEmpty()) {
                     popResource(level, pos, dropStack.copy());
                 }
@@ -126,21 +122,21 @@ public class MushroomColonyBlock extends BushBlock implements BonemealableBlock 
             level.setBlock(pos, state.setValue(AGE, 2), 2);
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader level, BlockPos pos, BlockState state) {
+    public boolean isValidBonemealTarget(LevelReader level, BlockPos pos, BlockState state, net.minecraft.world.level.block.BonemealSource source) {
         return state.getValue(AGE) < this.getMaxAge();
     }
 
     @Override
-    public boolean isBonemealSuccess(Level level, RandomSource random, BlockPos pos, BlockState state) {
+    public boolean isBonemealSuccess(Level level, RandomSource random, BlockPos pos, BlockState state, net.minecraft.world.level.block.BonemealSource source) {
         return state.getValue(AGE) < this.getMaxAge();
     }
 
     @Override
-    public void performBonemeal(ServerLevel level, RandomSource random, BlockPos pos, BlockState state) {
+    public void performBonemeal(ServerLevel level, RandomSource random, BlockPos pos, BlockState state, net.minecraft.world.level.block.BonemealSource source) {
         int currentAge = state.getValue(AGE);
         int ageIncrease = this.isFarmAndCharmFertilizedSoil(level.getBlockState(pos.below())) ? 2 : 1;
         int newAge = Math.min(this.getMaxAge(), currentAge + ageIncrease);
@@ -299,7 +295,7 @@ public class MushroomColonyBlock extends BushBlock implements BonemealableBlock 
             return false;
         }
 
-        ResourceLocation fertilizedSoilId = ResourceLocation.tryParse("farm_and_charm:fertilized_soil");
+        Identifier fertilizedSoilId = Identifier.tryParse("farm_and_charm:fertilized_soil");
         if (fertilizedSoilId == null) {
             return false;
         }

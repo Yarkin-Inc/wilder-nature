@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.GiraffeRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -13,7 +13,7 @@ import net.satisfy.wildernature.core.entity.animal.neutral.GiraffeEntity;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
-public class BabyGiraffeModel<T extends GiraffeEntity> extends HierarchicalModel<T> {
+public class BabyGiraffeModel<T extends GiraffeRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("baby_giraffe"), "main");
 
     private final ModelPart root;
@@ -21,6 +21,7 @@ public class BabyGiraffeModel<T extends GiraffeEntity> extends HierarchicalModel
     private final ModelPart neck;
 
     public BabyGiraffeModel(ModelPart root) {
+        super(root);
         this.root = root;
         this.giraffe = root.getChild("giraffe");
         ModelPart torso = this.giraffe.getChild("torso");
@@ -55,7 +56,12 @@ public class BabyGiraffeModel<T extends GiraffeEntity> extends HierarchicalModel
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         this.neck.yRot += netHeadYaw * ((float) Math.PI / 180F) * 0.35F;
@@ -68,13 +74,7 @@ public class BabyGiraffeModel<T extends GiraffeEntity> extends HierarchicalModel
         this.animate(entity.sleepState, BabyGiraffeAnimation.sleeping, ageInTicks, 1.0F);
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.giraffe.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.root;
-    }
+
+
 }

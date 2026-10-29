@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.defensive;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -17,7 +19,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
-import net.minecraft.world.entity.animal.AbstractFish;
+import net.minecraft.world.entity.animal.fish.AbstractFish;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -98,7 +100,7 @@ public class HippoEntity extends Animal {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MAX_HEALTH, 36.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.18D)
                 .add(Attributes.ATTACK_DAMAGE, 8.0D)
@@ -146,12 +148,12 @@ public class HippoEntity extends Animal {
         this.goalSelector.addGoal(8, new RandomSwimmingGoal(this, 1.0D, 10) {
             @Override
             public boolean canUse() {
-                return HippoEntity.this.isInWaterOrBubble() && !HippoEntity.this.isTossFeeding() && super.canUse();
+                return HippoEntity.this.isInWater() && !HippoEntity.this.isTossFeeding() && super.canUse();
             }
 
             @Override
             public boolean canContinueToUse() {
-                return HippoEntity.this.isInWaterOrBubble() && !HippoEntity.this.isTossFeeding() && super.canContinueToUse();
+                return HippoEntity.this.isInWater() && !HippoEntity.this.isTossFeeding() && super.canContinueToUse();
             }
         });
         this.goalSelector.addGoal(9, new WaterAvoidingRandomStrollGoal(this, 0.9D));
@@ -193,7 +195,7 @@ public class HippoEntity extends Animal {
             }
         });
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false,
-                target -> target instanceof Player player && this.canTargetPlayer(player)) {
+                (target, targetLevel) -> target instanceof Player player && this.canTargetPlayer(player)) {
             @Override
             public boolean canUse() {
                 return HippoEntity.this.getThreatLevel() >= THREAT_MAX && super.canUse();
@@ -213,7 +215,7 @@ public class HippoEntity extends Animal {
         if (this.getLastHurtByMob() == player) {
             return true;
         }
-        return player.isInWaterOrBubble() && this.distanceToSqr(player) <= 100.0D;
+        return player.isInWater() && this.distanceToSqr(player) <= 100.0D;
     }
 
     public void alertNearbyHippos() {
@@ -226,7 +228,7 @@ public class HippoEntity extends Animal {
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData spawnData) {
         SpawnGroupData output = super.finalizeSpawn(level, difficulty, reason, spawnData);
         this.snapTicks = 0;
         this.biteTicks = 0;
@@ -243,12 +245,12 @@ public class HippoEntity extends Animal {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt("Flags", this.entityData.get(DATA_FLAGS_ID));
         tag.putInt("ThreatLevel", this.getThreatLevel());
         if (!this.getDisplayedItem().isEmpty()) {
-            tag.put("DisplayedItem", this.getDisplayedItem().save(this.registryAccess()));
+            tag.store("DisplayedItem", ItemStack.OPTIONAL_CODEC, this.getDisplayedItem());
         }
         tag.putBoolean("TossFeeding", this.isTossFeeding());
         tag.putInt("SnapTicks", this.snapTicks);
@@ -267,36 +269,36 @@ public class HippoEntity extends Animal {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        this.entityData.set(DATA_FLAGS_ID, tag.getInt("Flags"));
-        this.setThreatLevel(tag.getInt("ThreatLevel"));
-        if (tag.contains("DisplayedItem")) {
-            this.entityData.set(DATA_DISPLAYED_ITEM, ItemStack.parseOptional(this.registryAccess(), tag.getCompound("DisplayedItem")));
+        this.entityData.set(DATA_FLAGS_ID, tag.getIntOr("Flags", 0));
+        this.setThreatLevel(tag.getIntOr("ThreatLevel", 0));
+        if (tag.read("DisplayedItem", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.entityData.set(DATA_DISPLAYED_ITEM, tag.read("DisplayedItem", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY));
         } else {
             this.entityData.set(DATA_DISPLAYED_ITEM, ItemStack.EMPTY);
         }
-        this.entityData.set(DATA_TOSS_FEEDING, tag.getBoolean("TossFeeding"));
-        this.snapTicks = tag.getInt("SnapTicks");
-        this.biteTicks = tag.getInt("BiteTicks");
-        this.feedTossTicks = tag.getInt("FeedTossTicks");
-        this.eatTicks = tag.getInt("EatTicks");
-        this.fishSnapCooldownTicks = tag.getInt("FishSnapCooldownTicks");
-        this.fishCheckCooldown = tag.getInt("FishCheckCooldown");
-        this.feedingCooldownTicks = tag.getInt("FeedingCooldownTicks");
-        this.yawnCooldownTicks = tag.getInt("YawnCooldownTicks");
-        this.particleCooldownTicks = tag.getInt("ParticleCooldownTicks");
-        this.hasYawnedAtCurrentThreshold = tag.getBoolean("HasYawnedAtCurrentThreshold");
-        if (tag.getBoolean("Snapping")) { this.startSnap(); this.snapTicks = 99999; }
-        if (tag.getBoolean("Biting")) { this.startBite(); this.biteTicks = 99999; }
-        if (tag.getBoolean("Eating")) { this.startEating(); this.eatTicks = 99999; }
+        this.entityData.set(DATA_TOSS_FEEDING, tag.getBooleanOr("TossFeeding", false));
+        this.snapTicks = tag.getIntOr("SnapTicks", 0);
+        this.biteTicks = tag.getIntOr("BiteTicks", 0);
+        this.feedTossTicks = tag.getIntOr("FeedTossTicks", 0);
+        this.eatTicks = tag.getIntOr("EatTicks", 0);
+        this.fishSnapCooldownTicks = tag.getIntOr("FishSnapCooldownTicks", 0);
+        this.fishCheckCooldown = tag.getIntOr("FishCheckCooldown", 0);
+        this.feedingCooldownTicks = tag.getIntOr("FeedingCooldownTicks", 0);
+        this.yawnCooldownTicks = tag.getIntOr("YawnCooldownTicks", 0);
+        this.particleCooldownTicks = tag.getIntOr("ParticleCooldownTicks", 0);
+        this.hasYawnedAtCurrentThreshold = tag.getBooleanOr("HasYawnedAtCurrentThreshold", false);
+        if (tag.getBooleanOr("Snapping", false)) { this.startSnap(); this.snapTicks = 99999; }
+        if (tag.getBooleanOr("Biting", false)) { this.startBite(); this.biteTicks = 99999; }
+        if (tag.getBooleanOr("Eating", false)) { this.startEating(); this.eatTicks = 99999; }
     }
 
     @Override
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.updateTimers();
             this.updateThreatLevel();
             this.updateFishSnapBehavior();
@@ -406,7 +408,7 @@ public class HippoEntity extends Animal {
 
     private void triggerYawn() {
         this.yawnCooldownTicks = YAWN_COOLDOWN_TICKS;
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.level().broadcastEntityEvent(this, (byte) 70);
         }
     }
@@ -425,7 +427,7 @@ public class HippoEntity extends Animal {
         if (this.fishCheckCooldown > 0) return;
         this.fishCheckCooldown = FISH_CHECK_INTERVAL;
 
-        if (!this.isInWaterOrBubble() || this.isBaby() || this.fishSnapCooldownTicks > 0 || this.isTossFeeding() || this.getTarget() != null) {
+        if (!this.isInWater() || this.isBaby() || this.fishSnapCooldownTicks > 0 || this.isTossFeeding() || this.getTarget() != null) {
             return;
         }
 
@@ -436,7 +438,7 @@ public class HippoEntity extends Animal {
         AbstractFish targetFish = nearbyFish.get(this.random.nextInt(nearbyFish.size()));
         this.startSnap();
         this.startTossFeeding(this.resolveFishDisplayItem(targetFish));
-        targetFish.hurt(this.damageSources().mobAttack(this), 100.0F);
+        targetFish.hurtOrSimulate(this.damageSources().mobAttack(this), 100.0F);
         this.fishSnapCooldownTicks = FISH_SNAP_COOLDOWN_MIN + this.random.nextInt(FISH_SNAP_COOLDOWN_RANDOM);
     }
 
@@ -455,9 +457,9 @@ public class HippoEntity extends Animal {
         this.snapState.animateWhen(this.isSnapping(), this.tickCount);
         this.threatState.animateWhen(this.isThreatening(), this.tickCount);
         this.eatState.animateWhen(this.isEating(), this.tickCount);
-        this.swimState.animateWhen(this.isInWaterOrBubble() && this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-5D, this.tickCount);
+        this.swimState.animateWhen(this.isInWater() && this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-5D, this.tickCount);
 
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             this.setupAnimationStates();
         }
     }
@@ -473,7 +475,7 @@ public class HippoEntity extends Animal {
 
     private void setupAnimationStates() {
         boolean isMoving = this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-4D;
-        boolean allowIdle = !isMoving && !this.isInWaterOrBubble() && !this.isBiting()
+        boolean allowIdle = !isMoving && !this.isInWater() && !this.isBiting()
                 && !this.isSnapping() && !this.isThreatening() && !this.isEating();
 
         if (allowIdle) {
@@ -574,9 +576,9 @@ public class HippoEntity extends Animal {
     }
 
     @Override
-    public boolean doHurtTarget(Entity target) {
+    public boolean doHurtTarget(net.minecraft.server.level.ServerLevel serverLevel, Entity target) {
         this.startBite();
-        boolean result = super.doHurtTarget(target);
+        boolean result = super.doHurtTarget(serverLevel, target);
         if (result) {
             double knockbackX = target.getX() - this.getX();
             double knockbackZ = target.getZ() - this.getZ();
@@ -595,8 +597,8 @@ public class HippoEntity extends Animal {
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float amount) {
-        boolean wasHurt = super.hurt(damageSource, amount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float amount) {
+        boolean wasHurt = super.hurtServer(serverLevel, damageSource, amount);
         if (wasHurt) {
             this.setThreatLevel(THREAT_MAX);
             this.alertNearbyHippos();
@@ -620,7 +622,7 @@ public class HippoEntity extends Animal {
         ItemStack itemStack = player.getItemInHand(hand);
 
         if (itemStack.isEmpty() && this.isBaby()) {
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 List<HippoEntity> nearbyParents = this.level().getEntitiesOfClass(HippoEntity.class,
                         this.getBoundingBox().inflate(16.0D),
                         h -> !h.isBaby() && h != this);
@@ -633,7 +635,7 @@ public class HippoEntity extends Animal {
         }
 
         if (this.isAcceptedFood(itemStack.getItem())) {
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 ItemStack renderStack = itemStack.copy();
                 renderStack.setCount(1);
                 this.startTossFeeding(renderStack);
@@ -653,7 +655,7 @@ public class HippoEntity extends Animal {
     @Nullable
     @Override
     public HippoEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.HIPPO.get().create(serverLevel);
+        return EntityTypeRegistry.HIPPO.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override

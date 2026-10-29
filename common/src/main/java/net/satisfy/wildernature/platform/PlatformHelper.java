@@ -1,85 +1,69 @@
 package net.satisfy.wildernature.platform;
 
-import dev.architectury.injectables.annotations.ExpectPlatform;
+import net.satisfy.wildernature.platform.fabric.PlatformHelperImpl;
 
 public class PlatformHelper {
-    @ExpectPlatform
     public static boolean isTermiteLogEatingEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isTermiteLogEatingEnabled();
     }
 
-    @ExpectPlatform
     public static boolean isBeaverDamsEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isBeaverDamsEnabled();
     }
 
-    @ExpectPlatform
     public static boolean isRaccoonStealingEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isRaccoonStealingEnabled();
     }
 
-    @ExpectPlatform
     public static boolean isRaccoonDoorsEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isRaccoonDoorsEnabled();
     }
 
-    @ExpectPlatform
     public static boolean isBoarRootingEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isBoarRootingEnabled();
     }
 
-    @ExpectPlatform
     public static boolean isDogDiggingEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isDogDiggingEnabled();
     }
 
-    @ExpectPlatform
     public static boolean isSquirrelGiftsEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isSquirrelGiftsEnabled();
     }
 
-    @ExpectPlatform
     public static boolean isBisonChargeEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isBisonChargeEnabled();
     }
 
-    @ExpectPlatform
     public static boolean isBountyBoardEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isBountyBoardEnabled();
     }
 
-    @ExpectPlatform
     public static int getBountyMinDaily() {
-        throw new AssertionError();
+        return PlatformHelperImpl.getBountyMinDaily();
     }
 
-    @ExpectPlatform
     public static int getBountyMaxDaily() {
-        throw new AssertionError();
+        return PlatformHelperImpl.getBountyMaxDaily();
     }
 
-    @ExpectPlatform
     public static boolean isEmoteParticlesEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isEmoteParticlesEnabled();
     }
 
-    @ExpectPlatform
     public static boolean isAnimationsEnabled() {
-        throw new AssertionError();
+        return PlatformHelperImpl.isAnimationsEnabled();
     }
 
-    @ExpectPlatform
     public static int getTermiteMoundRarity() {
-        throw new AssertionError();
+        return PlatformHelperImpl.getTermiteMoundRarity();
     }
 
-    @ExpectPlatform
     public static int getHollowCacheRarity() {
-        throw new AssertionError();
+        return PlatformHelperImpl.getHollowCacheRarity();
     }
 
-    @ExpectPlatform
     public static double getBountyExperienceMultiplier() {
-        throw new AssertionError();
+        return PlatformHelperImpl.getBountyExperienceMultiplier();
     }
 }

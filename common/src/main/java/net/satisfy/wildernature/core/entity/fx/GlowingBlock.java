@@ -35,10 +35,13 @@ public class GlowingBlock extends Entity {
     @Override
     public void tick() {
         super.tick();
-        if (!level().isClientSide && tickCount >= 600) {
+        if (!level().isClientSide() && tickCount >= 600) {
             this.discard();
         }
     }
+
+    @Override
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source, float amount) { return false; }
 
     @Override
     public boolean isCurrentlyGlowing() {
@@ -51,14 +54,14 @@ public class GlowingBlock extends Entity {
     }
 
     @Override
-    protected void readAdditionalSaveData(@NotNull net.minecraft.nbt.CompoundTag tag) {
-        if (tag.contains("GlowColor")) {
-            setGlowColor(tag.getInt("GlowColor"));
+    protected void readAdditionalSaveData(@NotNull net.minecraft.world.level.storage.ValueInput tag) {
+        {
+            setGlowColor(tag.getIntOr("GlowColor", 0));
         }
     }
 
     @Override
-    protected void addAdditionalSaveData(@NotNull net.minecraft.nbt.CompoundTag tag) {
+    protected void addAdditionalSaveData(@NotNull net.minecraft.world.level.storage.ValueOutput tag) {
         tag.putInt("GlowColor", getGlowColor());
     }
 }

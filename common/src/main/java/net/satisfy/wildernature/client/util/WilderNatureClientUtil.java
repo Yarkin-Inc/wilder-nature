@@ -3,12 +3,12 @@ package net.satisfy.wildernature.client.util;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.item.ItemProperties;
+
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,32 +21,6 @@ import net.satisfy.wildernature.core.fieldguide.FieldGuideEntry;
 import net.satisfy.wildernature.core.registry.ObjectRegistry;
 
 public class WilderNatureClientUtil {
-    public static void init() {
-        if (Platform.isFabric() && Platform.getEnvironment() == Env.CLIENT) {
-            initClient();
-        }
-    }
-
-    private static void initClient() {
-        makeHorn(ObjectRegistry.BISON_HORN.get());
-    }
-
-    public static void makeHorn(Item item) {
-        ItemProperties.register(item, ResourceLocation.withDefaultNamespace("blowing"), (itemStack, clientLevel, livingEntity, seed) -> {
-            if (livingEntity == null) {
-                return 0.0F;
-            }
-
-            if (livingEntity.getUseItem() != itemStack) {
-                return 0.0F;
-            }
-
-            return (float) (itemStack.getUseDuration(livingEntity) - livingEntity.getUseItemRemainingTicks()) / 20.0F;
-        });
-
-        ItemProperties.register(item, ResourceLocation.withDefaultNamespace("using"), (itemStack, clientLevel, livingEntity, seed) -> livingEntity != null && livingEntity.isUsingItem() && livingEntity.getUseItem() == itemStack ? 1.0F : 0.0F);
-    }
-
     public static LivingEntity createLivingEntity(FieldGuideEntry entry) {
         LivingEntity livingEntity = createLivingEntity(entry.entityId());
         if (livingEntity instanceof LionEntity lion) {
@@ -55,15 +29,16 @@ public class WilderNatureClientUtil {
         return livingEntity;
     }
 
-    public static LivingEntity createLivingEntity(ResourceLocation entityId) {
+    public static LivingEntity createLivingEntity(Identifier entityId) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) {
             return null;
         }
 
-        EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(entityId);
-        var entity = entityType.create(minecraft.level);
+        EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.getValue(entityId);
+        var entity = entityType.create(minecraft.level, net.minecraft.world.entity.EntitySpawnReason.LOAD);
         if (entity instanceof LivingEntity livingEntity) {
+            livingEntity.setId(-1); // Detached previews are not assigned a world entity ID.
             return livingEntity;
         }
 
@@ -89,7 +64,7 @@ public class WilderNatureClientUtil {
         };
     }
 
-    public static ResourceLocation getBiomeTexture(ResourceLocation biomeId) {
+    public static Identifier getBiomeTexture(Identifier biomeId) {
         String biomePath = biomeId.getPath();
         return switch (biomePath) {
             case "plains", "sunflower_plains", "birch_forest", "dark_forest", "beach", "desert", "forest", "river", "savanna", "taiga", "meadow", "frozen_peaks" -> WilderNature.identifier("textures/gui/icons/" + biomePath + ".png");
@@ -103,13 +78,13 @@ public class WilderNatureClientUtil {
         }
 
         if (!entry.food().startsWith("#")) {
-            Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(entry.food()));
+            Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(entry.food()));
             return item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
         }
 
-        ResourceLocation tagId = ResourceLocation.parse(entry.food().substring(1));
+        Identifier tagId = Identifier.parse(entry.food().substring(1));
         TagKey<Item> tagKey = TagKey.create(Registries.ITEM, tagId);
-        var optionalTag = BuiltInRegistries.ITEM.getTag(tagKey);
+        var optionalTag = BuiltInRegistries.ITEM.get(tagKey);
 
         if (optionalTag.isEmpty()) {
             return ItemStack.EMPTY;

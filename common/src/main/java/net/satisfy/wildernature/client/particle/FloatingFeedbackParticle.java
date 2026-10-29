@@ -7,7 +7,7 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
-public class FloatingFeedbackParticle extends TextureSheetParticle {
+public class FloatingFeedbackParticle extends SingleQuadParticle {
     private static final int FADE_DURATION = 6;
 
     private final float swayPhase;
@@ -25,8 +25,8 @@ public class FloatingFeedbackParticle extends TextureSheetParticle {
     private float previousQuadSize;
     private float growthSpeed;
 
-    protected FloatingFeedbackParticle(ClientLevel level, double x, double y, double z, MotionProfile motionProfile) {
-        super(level, x, y, z, 0.0D, 0.0D, 0.0D);
+    protected FloatingFeedbackParticle(ClientLevel level, double x, double y, double z, MotionProfile motionProfile, net.minecraft.client.renderer.texture.TextureAtlasSprite initialSprite) {
+        super(level, x, y, z, 0.0D, 0.0D, 0.0D, initialSprite);
         this.friction = 0.96F;
         this.gravity = 0.0F;
         this.hasPhysics = false;
@@ -98,8 +98,8 @@ public class FloatingFeedbackParticle extends TextureSheetParticle {
     }
 
     @Override
-    public @NotNull ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
+    public @NotNull SingleQuadParticle.Layer getLayer() {
+        return SingleQuadParticle.Layer.TRANSLUCENT;
     }
 
     public static record MotionProfile(int minimumLifetime, int maximumLifetime, float minimumSwaySpeed, float maximumSwaySpeed, float minimumSwayAmount, float maximumSwayAmount, float minimumUpwardSpeed, float maximumUpwardSpeed, float minimumRotationSpeed, float maximumRotationSpeed, float targetAlpha, float initialScale, float initialScaleVariance, float minimumScale, float maximumScale, float growthSpeed) {
@@ -114,12 +114,12 @@ public class FloatingFeedbackParticle extends TextureSheetParticle {
         }
 
         @Override
-        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.util.RandomSource random) {
             if (!PlatformHelper.isEmoteParticlesEnabled()) {
                 return null;
             }
-            FloatingFeedbackParticle particle = new FloatingFeedbackParticle(level, x, y, z, MOTION_PROFILE);
-            particle.pickSprite(this.spriteSet);
+            FloatingFeedbackParticle particle = new FloatingFeedbackParticle(level, x, y, z, MOTION_PROFILE, this.spriteSet.get(random));
+            particle.setSprite(this.spriteSet.get(random));
             return particle;
         }
     }
@@ -133,12 +133,12 @@ public class FloatingFeedbackParticle extends TextureSheetParticle {
         }
 
         @Override
-        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.util.RandomSource random) {
             if (!PlatformHelper.isEmoteParticlesEnabled()) {
                 return null;
             }
-            FloatingFeedbackParticle particle = new FloatingFeedbackParticle(level, x, y, z, MOTION_PROFILE);
-            particle.pickSprite(this.spriteSet);
+            FloatingFeedbackParticle particle = new FloatingFeedbackParticle(level, x, y, z, MOTION_PROFILE, this.spriteSet.get(random));
+            particle.setSprite(this.spriteSet.get(random));
             return particle;
         }
     }
@@ -152,12 +152,12 @@ public class FloatingFeedbackParticle extends TextureSheetParticle {
         }
 
         @Override
-        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.util.RandomSource random) {
             if (!PlatformHelper.isEmoteParticlesEnabled()) {
                 return null;
             }
-            FloatingFeedbackParticle particle = new FloatingFeedbackParticle(level, x, y, z, MOTION_PROFILE);
-            particle.pickSprite(this.spriteSet);
+            FloatingFeedbackParticle particle = new FloatingFeedbackParticle(level, x, y, z, MOTION_PROFILE, this.spriteSet.get(random));
+            particle.setSprite(this.spriteSet.get(random));
             return particle;
         }
     }

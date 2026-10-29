@@ -23,7 +23,12 @@ public class TermiteMoundDecorator extends TreeDecorator {
 
     @Override
     public void place(Context context) {
-        List<BlockPos> candidates = new ArrayList<>(context.logs());
+        // 26.3 includes the below-trunk provider in logs. Keep storage accessible
+        // above the soil instead of choosing the buried foundation block.
+        List<BlockPos> candidates = context.logs().stream()
+                .filter(pos -> net.minecraft.core.Direction.Plane.HORIZONTAL.stream()
+                        .anyMatch(direction -> context.isAir(pos.relative(direction))))
+                .toList();
         if (candidates.isEmpty()) {
             return;
         }

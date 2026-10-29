@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.tameable;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -82,12 +84,12 @@ public class ScorpionEntity extends TamableAnimal {
 
     public ScorpionEntity(EntityType<? extends TamableAnimal> entityType, Level level) {
         super(entityType, level);
-        this.setPathfindingMalus(PathType.DANGER_FIRE, -1.0F);
-        this.setPathfindingMalus(PathType.DAMAGE_FIRE, -1.0F);
+        this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, -1.0F);
+        this.setPathfindingMalus(PathType.FIRE, -1.0F);
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return TamableAnimal.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MAX_HEALTH, 16.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.26D)
                 .add(Attributes.ATTACK_DAMAGE, 3.0D)
@@ -125,8 +127,8 @@ public class ScorpionEntity extends TamableAnimal {
             protected void checkAndPerformAttack(LivingEntity target) {
                 if (this.isTimeToAttack() && this.mob.distanceToSqr(target) <= 1.0D) {
                     this.resetAttackCooldown();
-                    this.mob.swing(InteractionHand.MAIN_HAND);
-                    this.mob.doHurtTarget(target);
+                    this.mob.swing(InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT);
+                    this.mob.doHurtTarget((net.minecraft.server.level.ServerLevel) this.mob.level(), target);
                 }
             }
         });
@@ -202,7 +204,7 @@ public class ScorpionEntity extends TamableAnimal {
         boolean moving = this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-4D;
         this.walkState.animateWhen(moving && !this.isBurrowBusy(), this.tickCount);
         this.idleState.animateWhen(!moving && !this.isBurrowBusy(), this.tickCount);
-        this.attackState.animateWhen(this.swinging && !this.isBurrowBusy(), this.tickCount);
+        this.attackState.animateWhen(this.isSwinging() && !this.isBurrowBusy(), this.tickCount);
 
         if (this.isBurrowBusy()) {
             this.burrowState.startIfStopped(this.tickCount);
@@ -221,7 +223,7 @@ public class ScorpionEntity extends TamableAnimal {
 
         double distanceToTarget = this.distanceToSqr(target);
         if (this.attackCooldown <= 0 && distanceToTarget <= 2.0D) {
-            this.doHurtTarget(target);
+            this.doHurtTarget((net.minecraft.server.level.ServerLevel) this.level(), target);
             this.attackCooldown = 70;
             this.retreatTicks = 50;
 
@@ -356,8 +358,8 @@ public class ScorpionEntity extends TamableAnimal {
     }
 
     @Override
-    public boolean doHurtTarget(Entity target) {
-        boolean hit = super.doHurtTarget(target);
+    public boolean doHurtTarget(net.minecraft.server.level.ServerLevel serverLevel, Entity target) {
+        boolean hit = super.doHurtTarget(serverLevel, target);
         if (hit && target instanceof LivingEntity livingEntity) {
             Holder<MobEffect> neurotoxin = BuiltInRegistries.MOB_EFFECT.wrapAsHolder(MobEffectRegistry.NEUROTOXIN.get());
             MobEffectInstance existingEffect = livingEntity.getEffect(neurotoxin);
@@ -368,8 +370,8 @@ public class ScorpionEntity extends TamableAnimal {
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
-        boolean wasHurt = super.hurt(source, amount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource source, float amount) {
+        boolean wasHurt = super.hurtServer(serverLevel, source, amount);
         if (wasHurt) {
             this.unburrow();
 
@@ -401,7 +403,7 @@ public class ScorpionEntity extends TamableAnimal {
                     this.finalizeTame(player);
                     this.level().broadcastEntityEvent(this, (byte) 7);
                 }
-                return InteractionResult.sidedSuccess(this.level().isClientSide());
+                return InteractionResult.SUCCESS;
             }
 
             if (this.isFood(itemStack)) {
@@ -415,7 +417,7 @@ public class ScorpionEntity extends TamableAnimal {
                         this.level().broadcastEntityEvent(this, (byte) 6);
                     }
                 }
-                return InteractionResult.sidedSuccess(this.level().isClientSide());
+                return InteractionResult.SUCCESS;
             }
 
             return super.mobInteract(player, hand);
@@ -427,7 +429,7 @@ public class ScorpionEntity extends TamableAnimal {
                 this.jumping = false;
                 this.getNavigation().stop();
                 this.setTarget(null);
-                return InteractionResult.sidedSuccess(this.level().isClientSide());
+                return InteractionResult.SUCCESS;
             }
 
             if (this.isFood(itemStack) && this.getHealth() < this.getMaxHealth()) {
@@ -437,7 +439,7 @@ public class ScorpionEntity extends TamableAnimal {
                     }
                     this.heal(4.0F);
                 }
-                return InteractionResult.sidedSuccess(this.level().isClientSide());
+                return InteractionResult.SUCCESS;
             }
         }
 
@@ -579,7 +581,7 @@ public class ScorpionEntity extends TamableAnimal {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt("BurrowState", this.entityData.get(DATA_BURROW_STATE));
         tag.putInt("BurrowProgress", this.entityData.get(DATA_BURROW_PROGRESS));
@@ -591,24 +593,24 @@ public class ScorpionEntity extends TamableAnimal {
         tag.putBoolean("Calmed", this.entityData.get(DATA_CALMED));
 
         if (this.trustedPlayerUuid != null) {
-            tag.putUUID("TrustedPlayer", this.trustedPlayerUuid);
+            tag.store("TrustedPlayer", net.minecraft.core.UUIDUtil.CODEC, this.trustedPlayerUuid);
         }
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        this.entityData.set(DATA_BURROW_STATE, tag.getInt("BurrowState"));
-        this.entityData.set(DATA_BURROW_PROGRESS, tag.getInt("BurrowProgress"));
-        this.burrowCooldown = tag.getInt("BurrowCooldown");
-        this.burrowDuration = tag.getInt("BurrowDuration");
-        this.burrowOriginY = tag.contains("BurrowOriginY") ? tag.getDouble("BurrowOriginY") : this.getY();
-        this.entityData.set(DATA_TRUST, tag.getInt("Trust"));
-        this.entityData.set(DATA_TRUST_COOLDOWN, tag.getInt("TrustCooldown"));
-        this.entityData.set(DATA_CALMED, tag.getBoolean("Calmed"));
+        this.entityData.set(DATA_BURROW_STATE, tag.getIntOr("BurrowState", 0));
+        this.entityData.set(DATA_BURROW_PROGRESS, tag.getIntOr("BurrowProgress", 0));
+        this.burrowCooldown = tag.getIntOr("BurrowCooldown", 0);
+        this.burrowDuration = tag.getIntOr("BurrowDuration", 0);
+        this.burrowOriginY = tag.read("BurrowOriginY", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() ? tag.getDoubleOr("BurrowOriginY", 0D) : this.getY();
+        this.entityData.set(DATA_TRUST, tag.getIntOr("Trust", 0));
+        this.entityData.set(DATA_TRUST_COOLDOWN, tag.getIntOr("TrustCooldown", 0));
+        this.entityData.set(DATA_CALMED, tag.getBooleanOr("Calmed", false));
 
-        if (tag.hasUUID("TrustedPlayer")) {
-            this.trustedPlayerUuid = tag.getUUID("TrustedPlayer");
+        if (tag.read("TrustedPlayer", net.minecraft.core.UUIDUtil.CODEC).isPresent()) {
+            this.trustedPlayerUuid = tag.read("TrustedPlayer", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
         } else {
             this.trustedPlayerUuid = null;
         }
@@ -620,7 +622,7 @@ public class ScorpionEntity extends TamableAnimal {
         return null;
     }
 
-    public static boolean checkScorpionSpawnRules(EntityType<ScorpionEntity> entityType, ServerLevelAccessor level, MobSpawnType spawnType, BlockPos blockPos, RandomSource randomSource) {
+    public static boolean checkScorpionSpawnRules(EntityType<ScorpionEntity> entityType, ServerLevelAccessor level, EntitySpawnReason spawnType, BlockPos blockPos, RandomSource randomSource) {
         BlockState blockState = level.getBlockState(blockPos.below());
         return (blockState.is(BlockTags.SAND) || blockState.is(BlockTags.DIRT) || blockState.is(BlockTags.BASE_STONE_OVERWORLD)) && level.getRawBrightness(blockPos, 0) > 7 && checkMobSpawnRules(entityType, level, spawnType, blockPos, randomSource);
     }

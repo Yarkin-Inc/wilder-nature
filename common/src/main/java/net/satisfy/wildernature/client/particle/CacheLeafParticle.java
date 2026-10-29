@@ -7,7 +7,7 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
-public class CacheLeafParticle extends TextureSheetParticle {
+public class CacheLeafParticle extends SingleQuadParticle {
     private static final int FADE_DURATION = 6;
 
     private final float horizontalSwayPhase;
@@ -28,8 +28,8 @@ public class CacheLeafParticle extends TextureSheetParticle {
     private float previousQuadSize;
     private float growthSpeed;
 
-    protected CacheLeafParticle(ClientLevel level, double x, double y, double z, MotionProfile motionProfile) {
-        super(level, x, y, z, 0.0D, 0.0D, 0.0D);
+    protected CacheLeafParticle(ClientLevel level, double x, double y, double z, MotionProfile motionProfile, net.minecraft.client.renderer.texture.TextureAtlasSprite initialSprite) {
+        super(level, x, y, z, 0.0D, 0.0D, 0.0D, initialSprite);
         this.friction = 0.98F;
         this.gravity = 0.0F;
         this.hasPhysics = true;
@@ -118,8 +118,8 @@ public class CacheLeafParticle extends TextureSheetParticle {
     }
 
     @Override
-    public @NotNull ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_OPAQUE;
+    public @NotNull SingleQuadParticle.Layer getLayer() {
+        return SingleQuadParticle.Layer.OPAQUE;
     }
 
     public record MotionProfile(int minimumLifetime, int maximumLifetime, float minimumSwaySpeed, float maximumSwaySpeed, float minimumSwayAmount, float maximumSwayAmount, float minimumUpwardVelocityStart, float maximumUpwardVelocityStart, float minimumUpwardVelocityEnd, float maximumUpwardVelocityEnd, float minimumSideVelocity, float maximumSideVelocity, float minimumRotationSpeed, float maximumRotationSpeed, float targetAlpha, float initialScale, float initialScaleVariance, float minimumScale, float maximumScale, float growthSpeed, float minimumGravityStrength, float maximumGravityStrength, float minimumDownwardAcceleration, float maximumDownwardAcceleration, float minimumGlideStrength, float maximumGlideStrength) {
@@ -134,9 +134,9 @@ public class CacheLeafParticle extends TextureSheetParticle {
         }
 
         @Override
-        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
-            CacheLeafParticle particle = new CacheLeafParticle(level, x, y, z, MOTION_PROFILE);
-            particle.pickSprite(this.spriteSet);
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.util.RandomSource random) {
+            CacheLeafParticle particle = new CacheLeafParticle(level, x, y, z, MOTION_PROFILE, this.spriteSet.get(random));
+            particle.setSprite(this.spriteSet.get(random));
             return particle;
         }
     }
@@ -150,9 +150,9 @@ public class CacheLeafParticle extends TextureSheetParticle {
         }
 
         @Override
-        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
-            CacheLeafParticle particle = new CacheLeafParticle(level, x, y, z, MOTION_PROFILE);
-            particle.pickSprite(this.spriteSet);
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.util.RandomSource random) {
+            CacheLeafParticle particle = new CacheLeafParticle(level, x, y, z, MOTION_PROFILE, this.spriteSet.get(random));
+            particle.setSprite(this.spriteSet.get(random));
             return particle;
         }
     }

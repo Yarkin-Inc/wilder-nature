@@ -25,10 +25,7 @@ public class TermiteMoundBlock extends BaseEntityBlock {
         super(properties);
     }
 
-    @Override
-    protected @NotNull MapCodec<? extends BaseEntityBlock> codec() {
-        return simpleCodec(TermiteMoundBlock::new);
-    }
+
 
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {

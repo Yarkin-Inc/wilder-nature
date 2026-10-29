@@ -1,13 +1,16 @@
 package net.satisfy.wildernature.client.gui.screen;
 
 import com.mojang.math.Axis;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.satisfy.wildernature.client.util.EntityPreview;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
@@ -25,21 +28,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.parse("wildernature:textures/gui/field_guide/field_guide.png");
-    private static final ResourceLocation FRIENDLY_TEXTURE = WilderNature.identifier("textures/gui/icons/friendly.png");
-    private static final ResourceLocation FRIENDLY_GRAYSCALE_TEXTURE = WilderNature.identifier("textures/gui/icons/friendly_grayscale.png");
-    private static final ResourceLocation NEUTRAL_TEXTURE = WilderNature.identifier("textures/gui/icons/neutral.png");
-    private static final ResourceLocation NEUTRAL_GRAYSCALE_TEXTURE = WilderNature.identifier("textures/gui/icons/neutral_grayscale.png");
-    private static final ResourceLocation DEFENSIVE_TEXTURE = WilderNature.identifier("textures/gui/icons/defensive.png");
-    private static final ResourceLocation DEFENSIVE_GRAYSCALE_TEXTURE = WilderNature.identifier("textures/gui/icons/defensive_grayscale.png");
-    private static final ResourceLocation HEART_TEXTURE = WilderNature.identifier("textures/gui/icons/heart.png");
-    private static final ResourceLocation PAGE_FORWARD_TEXTURE = WilderNature.identifier("textures/gui/widgets/page_forward.png");
-    private static final ResourceLocation PAGE_FORWARD_HIGHLIGHTED_TEXTURE = WilderNature.identifier("textures/gui/widgets/page_forward_highlighted.png");
-    private static final ResourceLocation PAGE_BACKWARD_TEXTURE = WilderNature.identifier("textures/gui/widgets/page_backward.png");
-    private static final ResourceLocation PAGE_BACKWARD_HIGHLIGHTED_TEXTURE = WilderNature.identifier("textures/gui/widgets/page_backward_highlighted.png");
-    private static final ResourceLocation TAMEABLE_TEXTURE = WilderNature.identifier("textures/gui/icons/tameable.png");
-    private static final ResourceLocation NOT_TAMEABLE_TEXTURE = WilderNature.identifier("textures/gui/icons/not_tameable.png");
-    private static final ResourceLocation NOT_BREEDABLE_TEXTURE = WilderNature.identifier("textures/gui/icons/not_breedable.png");
+    private static final Identifier TEXTURE = Identifier.parse("wildernature:textures/gui/field_guide/field_guide.png");
+    private static final Identifier FRIENDLY_TEXTURE = WilderNature.identifier("textures/gui/icons/friendly.png");
+    private static final Identifier FRIENDLY_GRAYSCALE_TEXTURE = WilderNature.identifier("textures/gui/icons/friendly_grayscale.png");
+    private static final Identifier NEUTRAL_TEXTURE = WilderNature.identifier("textures/gui/icons/neutral.png");
+    private static final Identifier NEUTRAL_GRAYSCALE_TEXTURE = WilderNature.identifier("textures/gui/icons/neutral_grayscale.png");
+    private static final Identifier DEFENSIVE_TEXTURE = WilderNature.identifier("textures/gui/icons/defensive.png");
+    private static final Identifier DEFENSIVE_GRAYSCALE_TEXTURE = WilderNature.identifier("textures/gui/icons/defensive_grayscale.png");
+    private static final Identifier HEART_TEXTURE = WilderNature.identifier("textures/gui/icons/heart.png");
+    private static final Identifier PAGE_FORWARD_TEXTURE = WilderNature.identifier("textures/gui/widgets/page_forward.png");
+    private static final Identifier PAGE_FORWARD_HIGHLIGHTED_TEXTURE = WilderNature.identifier("textures/gui/widgets/page_forward_highlighted.png");
+    private static final Identifier PAGE_BACKWARD_TEXTURE = WilderNature.identifier("textures/gui/widgets/page_backward.png");
+    private static final Identifier PAGE_BACKWARD_HIGHLIGHTED_TEXTURE = WilderNature.identifier("textures/gui/widgets/page_backward_highlighted.png");
+    private static final Identifier TAMEABLE_TEXTURE = WilderNature.identifier("textures/gui/icons/tameable.png");
+    private static final Identifier NOT_TAMEABLE_TEXTURE = WilderNature.identifier("textures/gui/icons/not_tameable.png");
+    private static final Identifier NOT_BREEDABLE_TEXTURE = WilderNature.identifier("textures/gui/icons/not_breedable.png");
 
     private static final int TEXTURE_WIDTH = 316;
     private static final int TEXTURE_HEIGHT = 190;
@@ -127,9 +130,7 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
     private float rightLookPitch;
 
     public FieldGuideScreen(FieldGuideMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, Component.empty());
-        this.imageWidth = TEXTURE_WIDTH;
-        this.imageHeight = TEXTURE_HEIGHT;
+        super(menu, inventory, Component.empty(), TEXTURE_WIDTH, TEXTURE_HEIGHT);
         this.entries = new ArrayList<>(menu.getEntries());
         this.pageIndex = 0;
         this.leftLookYaw = 0.0F;
@@ -145,7 +146,10 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         int backwardX = this.leftPos + PAGE_BACKWARD_X;
         int forwardX = this.leftPos + PAGE_FORWARD_X;
         int buttonY = this.topPos + PAGE_BUTTON_Y;
@@ -174,7 +178,7 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
             return true;
         }
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
@@ -195,24 +199,24 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         this.renderTooltips(guiGraphics, mouseX, mouseY);
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+    public void extractBackground(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, this.leftPos, this.topPos, 0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT, TEXTURE_WIDTH, TEXTURE_HEIGHT);
         this.renderEntries(guiGraphics, mouseX, mouseY);
         this.renderPageButtons(guiGraphics, mouseX, mouseY);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
     }
 
-    private void renderEntries(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderEntries(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         FieldGuideEntry leftEntry = this.getLeftEntry();
         FieldGuideEntry rightEntry = this.getRightEntry();
 
@@ -225,7 +229,7 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
         }
     }
 
-    private void renderEntry(GuiGraphics guiGraphics, int mouseX, int mouseY, FieldGuideEntry entry, boolean leftPage) {
+    private void renderEntry(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, FieldGuideEntry entry, boolean leftPage) {
         int entityPreviewX = this.leftPos + (leftPage ? LEFT_ENTITY_PREVIEW_X : RIGHT_ENTITY_PREVIEW_X);
         int friendlyIconX = this.leftPos + (leftPage ? LEFT_ENTRY_FRIENDLY_ICON_X : RIGHT_ENTRY_FRIENDLY_ICON_X);
         int neutralIconX = this.leftPos + (leftPage ? LEFT_ENTRY_NEUTRAL_ICON_X : RIGHT_ENTRY_NEUTRAL_ICON_X);
@@ -247,50 +251,46 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
         this.renderBiomeIcons(guiGraphics, entry, biomeSlots);
     }
 
-    private void renderTameableIcon(GuiGraphics guiGraphics, FieldGuideEntry entry, int iconX, int iconY) {
-        ResourceLocation texture = entry.tameable() ? TAMEABLE_TEXTURE : NOT_TAMEABLE_TEXTURE;
-        guiGraphics.setColor(1.0F, 1.0F, 1.0F, TAMEABLE_ICON_ALPHA);
-        guiGraphics.blit(texture, iconX, iconY, 0, 0, TAMEABLE_ICON_WIDTH, TAMEABLE_ICON_HEIGHT, TAMEABLE_ICON_WIDTH, TAMEABLE_ICON_HEIGHT);
-        guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+    private void renderTameableIcon(GuiGraphicsExtractor guiGraphics, FieldGuideEntry entry, int iconX, int iconY) {
+        Identifier texture = entry.tameable() ? TAMEABLE_TEXTURE : NOT_TAMEABLE_TEXTURE;
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, iconX, iconY, 0, 0, TAMEABLE_ICON_WIDTH, TAMEABLE_ICON_HEIGHT, TAMEABLE_ICON_WIDTH, TAMEABLE_ICON_HEIGHT, ((int) (TAMEABLE_ICON_ALPHA * 255.0F) << 24) | 0xFFFFFF);
     }
 
-    private void renderFoodIcon(GuiGraphics guiGraphics, FieldGuideEntry entry, int iconX, int iconY) {
+    private void renderFoodIcon(GuiGraphicsExtractor guiGraphics, FieldGuideEntry entry, int iconX, int iconY) {
         ItemStack foodPreviewStack = WilderNatureClientUtil.getFoodPreviewStack(entry);
-        ResourceLocation texture = foodPreviewStack.isEmpty() ? NOT_BREEDABLE_TEXTURE : null;
+        Identifier texture = foodPreviewStack.isEmpty() ? NOT_BREEDABLE_TEXTURE : null;
 
-        guiGraphics.setColor(1.0F, 1.0F, 1.0F, TAMEABLE_ICON_ALPHA);
 
         if (texture != null) {
-            guiGraphics.blit(texture, iconX, iconY, 0, 0, FOOD_ICON_WIDTH, FOOD_ICON_HEIGHT, FOOD_ICON_WIDTH, FOOD_ICON_HEIGHT);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, iconX, iconY, 0, 0, FOOD_ICON_WIDTH, FOOD_ICON_HEIGHT, FOOD_ICON_WIDTH, FOOD_ICON_HEIGHT, ((int) (TAMEABLE_ICON_ALPHA * 255.0F) << 24) | 0xFFFFFF);
         } else {
             float scale = (float) FOOD_ICON_WIDTH / 16.0F;
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(iconX, iconY, 0.0F);
-            guiGraphics.pose().scale(scale, scale, 1.0F);
-            guiGraphics.renderItem(foodPreviewStack, 0, 0);
-            guiGraphics.pose().popPose();
+            guiGraphics.pose().pushMatrix();
+            guiGraphics.pose().translate(iconX, iconY);
+            guiGraphics.pose().scale(scale, scale);
+            guiGraphics.item(foodPreviewStack, 0, 0);
+            guiGraphics.pose().popMatrix();
         }
 
-        guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
-    private void renderPageButtons(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderPageButtons(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         int backwardX = this.leftPos + PAGE_BACKWARD_X;
         int forwardX = this.leftPos + PAGE_FORWARD_X;
         int buttonY = this.topPos + PAGE_BUTTON_Y;
 
         if (this.hasPreviousPage()) {
-            ResourceLocation texture = this.isPointInside(mouseX, mouseY, backwardX, buttonY, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT) ? PAGE_BACKWARD_HIGHLIGHTED_TEXTURE : PAGE_BACKWARD_TEXTURE;
-            guiGraphics.blit(texture, backwardX, buttonY, 0, 0, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT);
+            Identifier texture = this.isPointInside(mouseX, mouseY, backwardX, buttonY, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT) ? PAGE_BACKWARD_HIGHLIGHTED_TEXTURE : PAGE_BACKWARD_TEXTURE;
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, backwardX, buttonY, 0, 0, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT);
         }
 
         if (this.hasNextPage()) {
-            ResourceLocation texture = this.isPointInside(mouseX, mouseY, forwardX, buttonY, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT) ? PAGE_FORWARD_HIGHLIGHTED_TEXTURE : PAGE_FORWARD_TEXTURE;
-            guiGraphics.blit(texture, forwardX, buttonY, 0, 0, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT);
+            Identifier texture = this.isPointInside(mouseX, mouseY, forwardX, buttonY, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT) ? PAGE_FORWARD_HIGHLIGHTED_TEXTURE : PAGE_FORWARD_TEXTURE;
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, forwardX, buttonY, 0, 0, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT);
         }
     }
 
-    private void renderTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderTooltips(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         FieldGuideEntry leftEntry = this.getLeftEntry();
         FieldGuideEntry rightEntry = this.getRightEntry();
 
@@ -303,7 +303,7 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
         }
     }
 
-    private boolean renderTooltipsForPage(GuiGraphics guiGraphics, int mouseX, int mouseY, FieldGuideEntry entry, boolean leftPage) {
+    private boolean renderTooltipsForPage(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, FieldGuideEntry entry, boolean leftPage) {
         int friendlyIconX = this.leftPos + (leftPage ? LEFT_ENTRY_FRIENDLY_ICON_X : RIGHT_ENTRY_FRIENDLY_ICON_X);
         int neutralIconX = this.leftPos + (leftPage ? LEFT_ENTRY_NEUTRAL_ICON_X : RIGHT_ENTRY_NEUTRAL_ICON_X);
         int defensiveIconX = this.leftPos + (leftPage ? LEFT_ENTRY_DEFENSIVE_ICON_X : RIGHT_ENTRY_DEFENSIVE_ICON_X);
@@ -313,36 +313,36 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
         Component entityName = this.entryDisplayName(entry);
 
         if (entry.friendly() && this.isPointInside(mouseX, mouseY, friendlyIconX, this.topPos + ENTRY_FRIENDLY_ICON_Y, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT)) {
-            guiGraphics.renderTooltip(this.font, Component.translatable("tooltip.wildernature.friendly", entityName), mouseX, mouseY);
+            guiGraphics.setTooltipForNextFrame(this.font, Component.translatable("tooltip.wildernature.friendly", entityName), mouseX, mouseY);
             return true;
         }
 
         if (entry.neutral() && this.isPointInside(mouseX, mouseY, neutralIconX, this.topPos + ENTRY_NEUTRAL_ICON_Y, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT)) {
-            guiGraphics.renderTooltip(this.font, Component.translatable("tooltip.wildernature.neutral", entityName), mouseX, mouseY);
+            guiGraphics.setTooltipForNextFrame(this.font, Component.translatable("tooltip.wildernature.neutral", entityName), mouseX, mouseY);
             return true;
         }
 
         if (entry.defensive() && this.isPointInside(mouseX, mouseY, defensiveIconX, this.topPos + ENTRY_DEFENSIVE_ICON_Y, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT)) {
-            guiGraphics.renderTooltip(this.font, Component.translatable("tooltip.wildernature.defensive", entityName), mouseX, mouseY);
+            guiGraphics.setTooltipForNextFrame(this.font, Component.translatable("tooltip.wildernature.defensive", entityName), mouseX, mouseY);
             return true;
         }
 
         if (this.isPointInside(mouseX, mouseY, tameableIconX, this.topPos + TAMEABLE_ICON_Y, TAMEABLE_ICON_WIDTH, TAMEABLE_ICON_HEIGHT)) {
-            guiGraphics.renderTooltip(this.font, Component.translatable(entry.tameable() ? "tooltip.wildernature.tameable" : "tooltip.wildernature.not_tameable", entityName), mouseX, mouseY);
+            guiGraphics.setTooltipForNextFrame(this.font, Component.translatable(entry.tameable() ? "tooltip.wildernature.tameable" : "tooltip.wildernature.not_tameable", entityName), mouseX, mouseY);
             return true;
         }
 
         if (this.isPointInside(mouseX, mouseY, foodIconX, this.topPos + FOOD_ICON_Y, FOOD_ICON_WIDTH, FOOD_ICON_HEIGHT)) {
             Component foodTooltip = WilderNatureClientUtil.getFoodTooltip(entry);
             if (foodTooltip != null) {
-                guiGraphics.renderTooltip(this.font, foodTooltip, mouseX, mouseY);
+                guiGraphics.setTooltipForNextFrame(this.font, foodTooltip, mouseX, mouseY);
                 return true;
             }
         }
 
         if (this.isPointInside(mouseX, mouseY, healthAreaX, this.topPos + HEALTH_AREA_Y, HEALTH_AREA_WIDTH, HEALTH_AREA_HEIGHT)) {
             int hearts = Mth.ceil(WilderNatureClientUtil.getMaxHealth(entry) / 2.0F);
-            guiGraphics.renderTooltip(this.font, Component.translatable("tooltip.wildernature.health", hearts), mouseX, mouseY);
+            guiGraphics.setTooltipForNextFrame(this.font, Component.translatable("tooltip.wildernature.health", hearts), mouseX, mouseY);
             return true;
         }
 
@@ -350,13 +350,13 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
         return this.renderBiomeTooltip(guiGraphics, mouseX, mouseY, entry, biomeSlots);
     }
 
-    private boolean renderBiomeTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY, FieldGuideEntry entry, int[] biomeSlots) {
-        List<ResourceLocation> biomeIds = entry.biomes();
+    private boolean renderBiomeTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, FieldGuideEntry entry, int[] biomeSlots) {
+        List<Identifier> biomeIds = entry.biomes();
         if (biomeIds.isEmpty()) {
             return false;
         }
 
-        List<ResourceLocation> displayedBiomes = biomeIds.subList(0, Math.min(biomeIds.size(), biomeSlots.length));
+        List<Identifier> displayedBiomes = biomeIds.subList(0, Math.min(biomeIds.size(), biomeSlots.length));
         int[] slotIndexes = WilderNatureClientUtil.getCenteredSlotIndexes(displayedBiomes.size());
 
         for (int index = 0; index < displayedBiomes.size(); index++) {
@@ -364,9 +364,9 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
             int iconY = this.topPos + BIOME_ICON_Y;
 
             if (this.isPointInside(mouseX, mouseY, iconX, iconY, BIOME_ICON_SIZE, BIOME_ICON_SIZE)) {
-                ResourceLocation biomeId = displayedBiomes.get(index);
+                Identifier biomeId = displayedBiomes.get(index);
                 Component biomeName = Component.translatable("biome." + biomeId.getNamespace() + "." + biomeId.getPath());
-                guiGraphics.renderTooltip(this.font, Component.translatable("tooltip.wildernature.spawn", biomeName), mouseX, mouseY);
+                guiGraphics.setTooltipForNextFrame(this.font, Component.translatable("tooltip.wildernature.spawn", biomeName), mouseX, mouseY);
                 return true;
             }
         }
@@ -374,22 +374,22 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
         return false;
     }
 
-    private void renderFriendlyIcon(GuiGraphics guiGraphics, FieldGuideEntry entry, int iconX, int iconY) {
-        ResourceLocation texture = entry.friendly() ? FRIENDLY_TEXTURE : FRIENDLY_GRAYSCALE_TEXTURE;
-        guiGraphics.blit(texture, iconX, iconY, 0, 0, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT);
+    private void renderFriendlyIcon(GuiGraphicsExtractor guiGraphics, FieldGuideEntry entry, int iconX, int iconY) {
+        Identifier texture = entry.friendly() ? FRIENDLY_TEXTURE : FRIENDLY_GRAYSCALE_TEXTURE;
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, iconX, iconY, 0, 0, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT);
     }
 
-    private void renderNeutralIcon(GuiGraphics guiGraphics, FieldGuideEntry entry, int iconX, int iconY) {
-        ResourceLocation texture = entry.neutral() ? NEUTRAL_TEXTURE : NEUTRAL_GRAYSCALE_TEXTURE;
-        guiGraphics.blit(texture, iconX, iconY, 0, 0, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT);
+    private void renderNeutralIcon(GuiGraphicsExtractor guiGraphics, FieldGuideEntry entry, int iconX, int iconY) {
+        Identifier texture = entry.neutral() ? NEUTRAL_TEXTURE : NEUTRAL_GRAYSCALE_TEXTURE;
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, iconX, iconY, 0, 0, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT);
     }
 
-    private void renderDefensiveIcon(GuiGraphics guiGraphics, FieldGuideEntry entry, int iconX, int iconY) {
-        ResourceLocation texture = entry.defensive() ? DEFENSIVE_TEXTURE : DEFENSIVE_GRAYSCALE_TEXTURE;
-        guiGraphics.blit(texture, iconX, iconY, 0, 0, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT);
+    private void renderDefensiveIcon(GuiGraphicsExtractor guiGraphics, FieldGuideEntry entry, int iconX, int iconY) {
+        Identifier texture = entry.defensive() ? DEFENSIVE_TEXTURE : DEFENSIVE_GRAYSCALE_TEXTURE;
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, iconX, iconY, 0, 0, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT, TRAIT_ICON_WIDTH, TRAIT_ICON_HEIGHT);
     }
 
-    private void renderEntityPreview(GuiGraphics guiGraphics, FieldGuideEntry entry, int mouseX, int mouseY, int areaX, int areaY, boolean leftPage) {
+    private void renderEntityPreview(GuiGraphicsExtractor guiGraphics, FieldGuideEntry entry, int mouseX, int mouseY, int areaX, int areaY, boolean leftPage) {
         LivingEntity livingEntity = WilderNatureClientUtil.createLivingEntity(entry);
         if (livingEntity == null) {
             return;
@@ -442,7 +442,7 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
         Vector3f translation = new Vector3f(0.0F, livingEntity.getBbHeight() * 0.5F, 0.0F);
         Quaternionf cameraRotation = pitchRotation.conjugate(new Quaternionf());
 
-        InventoryScreen.renderEntityInInventory(guiGraphics, entityX, entityY, clampedScale, translation, bodyRotation, cameraRotation, livingEntity);
+        EntityPreview.extract(guiGraphics, entityX, entityY, clampedScale, translation, bodyRotation, cameraRotation, livingEntity);
 
         livingEntity.yBodyRot = previousBodyRot;
         livingEntity.setYRot(previousYRot);
@@ -451,7 +451,7 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
         livingEntity.yHeadRot = previousYHeadRot;
     }
 
-    private void renderHealth(GuiGraphics guiGraphics, FieldGuideEntry entry, int areaX, int areaY) {
+    private void renderHealth(GuiGraphicsExtractor guiGraphics, FieldGuideEntry entry, int areaX, int areaY) {
         int heartCount = Mth.ceil(WilderNatureClientUtil.getMaxHealth(entry) / 2.0F);
         if (heartCount <= 0) {
             return;
@@ -463,43 +463,43 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
         int startY = areaY + (HEALTH_AREA_HEIGHT - HEART_HEIGHT) / 2;
 
         for (int index = 0; index < heartCount; index++) {
-            guiGraphics.blit(HEART_TEXTURE, startX + index * heartSpacing, startY, 0, 0, HEART_WIDTH, HEART_HEIGHT, HEART_WIDTH, HEART_HEIGHT);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, startX + index * heartSpacing, startY, 0, 0, HEART_WIDTH, HEART_HEIGHT, HEART_WIDTH, HEART_HEIGHT);
         }
     }
 
-    private void renderTitle(GuiGraphics guiGraphics, FieldGuideEntry entry, int fieldX, int fieldY) {
+    private void renderTitle(GuiGraphicsExtractor guiGraphics, FieldGuideEntry entry, int fieldX, int fieldY) {
         String title = this.entryDisplayName(entry).getString();
         int textWidth = this.font.width(title);
         int textX = fieldX + (TITLE_FIELD_WIDTH - textWidth) / 2;
         int textY = fieldY + (TITLE_FIELD_HEIGHT - this.font.lineHeight) / 2;
-        guiGraphics.drawString(this.font, title, textX, textY, TITLE_COLOR, false);
+        guiGraphics.text(this.font, title, textX, textY, TITLE_COLOR, false);
     }
 
     private Component entryDisplayName(FieldGuideEntry entry) {
         if (entry.title() != null && !entry.title().isBlank()) {
             return Component.translatable(entry.title());
         }
-        return BuiltInRegistries.ENTITY_TYPE.get(entry.entityId()).getDescription();
+        return BuiltInRegistries.ENTITY_TYPE.getValue(entry.entityId()).getDescription();
     }
 
-    private void renderBiomeIcons(GuiGraphics guiGraphics, FieldGuideEntry entry, int[] biomeSlots) {
-        List<ResourceLocation> biomeIds = entry.biomes();
+    private void renderBiomeIcons(GuiGraphicsExtractor guiGraphics, FieldGuideEntry entry, int[] biomeSlots) {
+        List<Identifier> biomeIds = entry.biomes();
         if (biomeIds.isEmpty()) {
             return;
         }
 
-        List<ResourceLocation> displayedBiomes = biomeIds.subList(0, Math.min(biomeIds.size(), biomeSlots.length));
+        List<Identifier> displayedBiomes = biomeIds.subList(0, Math.min(biomeIds.size(), biomeSlots.length));
         int[] slotIndexes = WilderNatureClientUtil.getCenteredSlotIndexes(displayedBiomes.size());
 
         for (int index = 0; index < displayedBiomes.size(); index++) {
-            ResourceLocation texture = WilderNatureClientUtil.getBiomeTexture(displayedBiomes.get(index));
+            Identifier texture = WilderNatureClientUtil.getBiomeTexture(displayedBiomes.get(index));
             if (texture == null) {
                 continue;
             }
 
             int iconX = this.leftPos + biomeSlots[slotIndexes[index]];
             int iconY = this.topPos + BIOME_ICON_Y;
-            guiGraphics.blit(texture, iconX, iconY, 0, 0, BIOME_ICON_SIZE, BIOME_ICON_SIZE, BIOME_ICON_SIZE, BIOME_ICON_SIZE);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, iconX, iconY, 0, 0, BIOME_ICON_SIZE, BIOME_ICON_SIZE, BIOME_ICON_SIZE, BIOME_ICON_SIZE);
         }
     }
 
@@ -550,7 +550,7 @@ public class FieldGuideScreen extends AbstractContainerScreen<FieldGuideMenu> {
             return;
         }
 
-        SoundEvent soundEvent = BuiltInRegistries.SOUND_EVENT.get(entry.ambientSound());
+        SoundEvent soundEvent = BuiltInRegistries.SOUND_EVENT.getValue(entry.ambientSound());
         if (soundEvent == null || soundEvent == SoundEvents.EMPTY) {
             return;
         }

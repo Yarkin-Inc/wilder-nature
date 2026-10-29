@@ -3,9 +3,7 @@
   "category": "food",
   "cookingtime": 100,
   "experience": 0.35,
-  "ingredient": {
-    "item": "wildernature:bison_meat"
-  },
+  "ingredient": "wildernature:bison_meat",
   "result": {
     "id": "wildernature:cooked_bison_meat"
   }

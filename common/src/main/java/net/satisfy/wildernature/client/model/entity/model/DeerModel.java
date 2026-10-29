@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.DeerRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -12,13 +12,14 @@ import net.satisfy.wildernature.client.model.entity.animation.DeerAnimation;
 import net.satisfy.wildernature.core.entity.animal.neutral.DeerEntity;
 import org.jetbrains.annotations.NotNull;
 
-public class DeerModel extends HierarchicalModel<DeerEntity> {
+public class DeerModel<T extends DeerRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("deer"), "main");
 
     private final ModelPart deer;
     private final ModelPart head;
 
     public DeerModel(ModelPart root) {
+        super(root);
         this.deer = root.getChild("deer");
         this.head = this.deer.getChild("body").getChild("neck").getChild("head");
     }
@@ -49,7 +50,12 @@ public class DeerModel extends HierarchicalModel<DeerEntity> {
     }
 
     @Override
-    public void setupAnim(DeerEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         if (!entity.isSleeping()) {
@@ -74,13 +80,7 @@ public class DeerModel extends HierarchicalModel<DeerEntity> {
         this.animate(entity.eatingState, DeerAnimation.eat, ageInTicks, 1.0F);
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int alpha) {
-        deer.render(poseStack, vertexConsumer, packedLight, packedOverlay, alpha);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.deer;
-    }
+
+
 }

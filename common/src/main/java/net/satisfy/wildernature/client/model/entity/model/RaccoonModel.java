@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.RaccoonRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -15,11 +15,12 @@ import net.satisfy.wildernature.core.entity.animal.neutral.RaccoonEntity;
 import org.jetbrains.annotations.NotNull;
 
 @Environment(EnvType.CLIENT)
-public class RaccoonModel<T extends RaccoonEntity> extends HierarchicalModel<T> {
+public class RaccoonModel<T extends RaccoonRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("raccoon"), "main");
     private final ModelPart root;
 
     public RaccoonModel(ModelPart root) {
+        super(root);
         this.root = root;
     }
 
@@ -44,7 +45,12 @@ public class RaccoonModel<T extends RaccoonEntity> extends HierarchicalModel<T> 
     }
 
     @Override
-    public void setupAnim(T raccoon, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T raccoon) {
+        float limbSwing = raccoon.walkAnimationPos;
+        float limbSwingAmount = raccoon.walkAnimationSpeed;
+        float ageInTicks = raccoon.ageInTicks;
+        float netHeadYaw = raccoon.yRot;
+        float headPitch = raccoon.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         if (raccoon.isSleeping()) {
@@ -62,13 +68,7 @@ public class RaccoonModel<T extends RaccoonEntity> extends HierarchicalModel<T> 
         this.animate(raccoon.washingState, RaccoonAnimation.wash, ageInTicks, 1.0F);
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.root.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.root;
-    }
+
+
 }

@@ -36,9 +36,9 @@ public final class BountyAssistTracker {
     }
 
     private static ServerPlayer getAttackingPlayer(Entity sourceEntity) {
-        
-        
-        
+
+
+
         if (sourceEntity instanceof ServerPlayer serverPlayer) {
             return serverPlayer;
         }

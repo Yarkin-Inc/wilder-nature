@@ -45,8 +45,8 @@ public class AmmunitionItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltip, TooltipFlag tooltipFlag) {
-        tooltip.add(Component.translatable("tooltip.wildernature.ammunition", damage).withStyle(ChatFormatting.DARK_GREEN));
+    public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltip, TooltipFlag tooltipFlag) {
+        tooltip.accept(Component.translatable("tooltip.wildernature.ammunition", damage).withStyle(ChatFormatting.DARK_GREEN));
     }
 
     public boolean hasAmmo(ItemStack stack) {

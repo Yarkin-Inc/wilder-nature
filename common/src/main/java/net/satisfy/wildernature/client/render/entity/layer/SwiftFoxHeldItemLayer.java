@@ -5,28 +5,25 @@ import com.mojang.math.Axis;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.satisfy.wildernature.client.model.entity.model.SwiftFoxModel;
-import net.satisfy.wildernature.core.entity.animal.neutral.SwiftFoxEntity;
+import net.satisfy.wildernature.client.render.state.SwiftFoxRenderState;
 
 @Environment(EnvType.CLIENT)
-public class SwiftFoxHeldItemLayer extends RenderLayer<SwiftFoxEntity, SwiftFoxModel<SwiftFoxEntity>> {
-    private final ItemInHandRenderer itemInHandRenderer;
-
-    public SwiftFoxHeldItemLayer(RenderLayerParent<SwiftFoxEntity, SwiftFoxModel<SwiftFoxEntity>> renderer, ItemInHandRenderer itemInHandRenderer) {
+public class SwiftFoxHeldItemLayer extends RenderLayer<SwiftFoxRenderState, SwiftFoxModel<SwiftFoxRenderState>> {
+public SwiftFoxHeldItemLayer(RenderLayerParent<SwiftFoxRenderState, SwiftFoxModel<SwiftFoxRenderState>> renderer) {
         super(renderer);
-        this.itemInHandRenderer = itemInHandRenderer;
     }
 
     @Override
-    public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, SwiftFoxEntity entity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
-        ItemStack itemStack = entity.getMainHandItem();
-        if (itemStack.isEmpty()) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector buffer, int packedLight, SwiftFoxRenderState entity, float netHeadYaw, float headPitch) {
+        this.getParentModel().setupAnim(entity);
+        if (entity.heldItem.isEmpty()) {
             return;
         }
 
@@ -45,12 +42,12 @@ public class SwiftFoxHeldItemLayer extends RenderLayer<SwiftFoxEntity, SwiftFoxM
         }
 
         poseStack.translate(0.05F, 0.15F, -0.45F);
-        poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
-        poseStack.mulPose(Axis.ZN.rotationDegrees(33.0F));
-        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+        poseStack.rotate(Axis.XP.rotationDegrees(-90.0F));
+        poseStack.rotate(Axis.ZN.rotationDegrees(33.0F));
+        poseStack.rotate(Axis.YP.rotationDegrees(180.0F));
         poseStack.scale(0.4F, 0.4F, 0.4F);
 
-        this.itemInHandRenderer.renderItem(entity, itemStack, ItemDisplayContext.FIXED, false, poseStack, buffer, packedLight);
+        entity.heldItem.submit(poseStack, buffer, packedLight, OverlayTexture.NO_OVERLAY, entity.outlineColor);
         poseStack.popPose();
     }
 }

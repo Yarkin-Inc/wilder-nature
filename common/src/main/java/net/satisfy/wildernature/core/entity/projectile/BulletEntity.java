@@ -1,5 +1,8 @@
 package net.satisfy.wildernature.core.entity.projectile;
 
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -9,7 +12,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.Fireball;
+import net.minecraft.world.entity.projectile.hurtingprojectile.Fireball;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -76,15 +79,15 @@ public class BulletEntity extends Fireball {
     @Override
     protected void onHitEntity(EntityHitResult raytrace) {
         super.onHitEntity(raytrace);
-        if (!level().isClientSide) {
+        if (!level().isClientSide()) {
             Entity target = raytrace.getEntity();
             Entity shooter = getOwner();
             AmmunitionItem bullet = (AmmunitionItem) getItem().getItem();
 
-            int lastHurtResistant = target.invulnerableTime;
-            if (ignoreInvulnerability) target.invulnerableTime = 0;
+            int lastHurtResistant = target.getInvulnerableTime();
+            if (ignoreInvulnerability) target.setInvulnerableTime(0);
 
-            boolean damaged = target.hurt(level().damageSources().indirectMagic(this, shooter),
+            boolean damaged = target.hurtOrSimulate(level().damageSources().indirectMagic(this, shooter),
                     (float) bullet.modifyDamage(damage, this, target, shooter, level()));
 
             if (damaged && target instanceof LivingEntity livingTarget) {
@@ -92,9 +95,9 @@ public class BulletEntity extends Fireball {
                     Vec3 vec = getDeltaMovement().multiply(1, 0, 1).normalize().scale(knockbackStrength);
                     if (vec.lengthSqr() > 0) livingTarget.push(vec.x, 0.1, vec.z);
                 }
-                if (ignoreInvulnerability) livingTarget.invulnerableTime = 0;
+                if (ignoreInvulnerability) livingTarget.setInvulnerableTime(0);
             } else if (!damaged && ignoreInvulnerability) {
-                target.invulnerableTime = lastHurtResistant;
+                target.setInvulnerableTime(lastHurtResistant);
             }
         }
     }
@@ -102,12 +105,12 @@ public class BulletEntity extends Fireball {
     @Override
     protected void onHit(HitResult result) {
         super.onHit(result);
-        if (!level().isClientSide && (!noPhysics || result.getType() != HitResult.Type.BLOCK))
+        if (!level().isClientSide() && (!noPhysics || result.getType() != HitResult.Type.BLOCK))
             remove(RemovalReason.KILLED);
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
+    public void addAdditionalSaveData(ValueOutput compound) {
         super.addAdditionalSaveData(compound);
         compound.putInt("tickssincefired", ticksSinceFired);
         compound.putDouble("damage", damage);
@@ -117,13 +120,13 @@ public class BulletEntity extends Fireball {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
+    public void readAdditionalSaveData(ValueInput compound) {
         super.readAdditionalSaveData(compound);
-        ticksSinceFired = compound.getInt("tickssincefired");
-        damage = compound.getDouble("damage");
-        lifeTicks = compound.getInt("lifeTicks");
-        ignoreInvulnerability = compound.getBoolean("ignoreinvulnerability");
-        knockbackStrength = compound.getDouble("knockback");
+        ticksSinceFired = compound.getIntOr("tickssincefired", 0);
+        damage = compound.getDoubleOr("damage", 0D);
+        lifeTicks = compound.getIntOr("lifeTicks", 0);
+        ignoreInvulnerability = compound.getBooleanOr("ignoreinvulnerability", false);
+        knockbackStrength = compound.getDoubleOr("knockback", 0D);
     }
 
     public double getDamage() {
@@ -156,7 +159,7 @@ public class BulletEntity extends Fireball {
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource source, float amount) {
         return false;
     }
 

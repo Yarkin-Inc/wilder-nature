@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.passive;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -21,7 +23,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.AxeItem;
+import net.satisfy.wildernature.core.util.StrippableLogs;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -69,7 +71,7 @@ public class BeaverEntity extends Animal {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.22D).add(Attributes.MAX_HEALTH, 10.0D);
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes().add(Attributes.MOVEMENT_SPEED, 0.22D).add(Attributes.MAX_HEALTH, 10.0D);
     }
 
     @Override
@@ -142,7 +144,7 @@ public class BeaverEntity extends Animal {
             this.sleepCooldownTicks--;
         }
 
-        boolean isNight = !this.level().isDay();
+        boolean isNight = !this.level().isBrightOutside();
         boolean isStill = this.getDeltaMovement().horizontalDistanceSqr() < 0.002D;
         boolean isDry = !this.isInWaterOrRain();
 
@@ -228,7 +230,7 @@ public class BeaverEntity extends Animal {
                 if (!this.level().isClientSide()) {
                     this.playSound(SoundEventRegistry.BEAVER_TRADE.get(), 0.6F, 1.2F);
                 }
-                return InteractionResult.sidedSuccess(this.level().isClientSide());
+                return InteractionResult.SUCCESS;
             }
 
             int transferCount = Math.min(heldStack.getCount(), freeSlots);
@@ -243,7 +245,7 @@ public class BeaverEntity extends Animal {
                 this.playSound(SoundEvents.FOX_EAT, 0.6F, 1.1F);
             }
 
-            return InteractionResult.sidedSuccess(this.level().isClientSide());
+            return InteractionResult.SUCCESS;
         }
 
         if (heldStack.is(TagsRegistry.BEAVER_PAYMENT)) {
@@ -252,7 +254,7 @@ public class BeaverEntity extends Animal {
                 if (!this.level().isClientSide()) {
                     this.playSound(SoundEventRegistry.BEAVER_TRADE.get(), 0.6F, 1.2F);
                 }
-                return InteractionResult.sidedSuccess(this.level().isClientSide());
+                return InteractionResult.SUCCESS;
             }
 
             if (!this.level().isClientSide()) {
@@ -266,7 +268,7 @@ public class BeaverEntity extends Animal {
                 this.playSound(SoundEventRegistry.BEAVER_TRADE.get(), 0.8F, 1.0F);
             }
 
-            return InteractionResult.sidedSuccess(this.level().isClientSide());
+            return InteractionResult.SUCCESS;
         }
 
         return super.mobInteract(player, hand);
@@ -326,7 +328,7 @@ public class BeaverEntity extends Animal {
 
     @Nullable
     public static BlockState getStrippedState(BlockState state) {
-        Block strippedBlock = AxeItem.STRIPPABLES.get(state.getBlock());
+        Block strippedBlock = StrippableLogs.blocks().get(state.getBlock());
         if (strippedBlock == null) {
             return null;
         }
@@ -372,7 +374,7 @@ public class BeaverEntity extends Animal {
             return false;
         }
 
-        return AxeItem.STRIPPABLES.containsKey(blockItem.getBlock());
+        return StrippableLogs.blocks().containsKey(blockItem.getBlock());
     }
 
     private boolean isStrippedLog(ItemStack stack) {
@@ -384,7 +386,7 @@ public class BeaverEntity extends Animal {
             return false;
         }
 
-        return AxeItem.STRIPPABLES.containsValue(blockItem.getBlock()) && !AxeItem.STRIPPABLES.containsKey(blockItem.getBlock());
+        return StrippableLogs.blocks().containsValue(blockItem.getBlock()) && !StrippableLogs.blocks().containsKey(blockItem.getBlock());
     }
 
     public boolean hasRawLogs() {
@@ -433,7 +435,7 @@ public class BeaverEntity extends Animal {
         for (int inventorySlot = 0; inventorySlot < this.beaverInventory.size(); inventorySlot++) {
             ItemStack inventoryStack = this.beaverInventory.get(inventorySlot);
             if (this.isStrippedLog(inventoryStack)) {
-                this.spawnAtLocation(inventoryStack.copy());
+                this.spawnAtLocation((net.minecraft.server.level.ServerLevel) level(), inventoryStack.copy());
                 this.beaverInventory.set(inventorySlot, ItemStack.EMPTY);
             }
         }
@@ -455,7 +457,7 @@ public class BeaverEntity extends Animal {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt("NodTicks", this.nodTicks);
         tag.putBoolean("Nodding", this.isNodding());
@@ -464,25 +466,25 @@ public class BeaverEntity extends Animal {
         tag.putInt("SleepPreparationTicks", this.sleepPreparationTicks);
         tag.putInt("RequiredSleepPreparationTicks", this.requiredSleepPreparationTicks);
         tag.putInt("SleepCooldownTicks", this.sleepCooldownTicks);
-        ContainerHelper.saveAllItems(tag, this.beaverInventory, this.registryAccess());
+        ContainerHelper.saveAllItems(tag, this.beaverInventory);
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        this.nodTicks = tag.getInt("NodTicks");
-        if (tag.contains("Nodding")) {
-            this.setNodding(tag.getBoolean("Nodding"));
+        this.nodTicks = tag.getIntOr("NodTicks", 0);
+        if (tag.read("Nodding", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.setNodding(tag.getBooleanOr("Nodding", false));
         }
-        this.damCooldownTicks = tag.getInt("DamCooldownTicks");
-        if (tag.contains("Sleeping")) {
-            this.setSleeping(tag.getBoolean("Sleeping"));
+        this.damCooldownTicks = tag.getIntOr("DamCooldownTicks", 0);
+        if (tag.read("Sleeping", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.setSleeping(tag.getBooleanOr("Sleeping", false));
         }
-        this.sleepPreparationTicks = tag.getInt("SleepPreparationTicks");
-        this.requiredSleepPreparationTicks = tag.contains("RequiredSleepPreparationTicks") ? tag.getInt("RequiredSleepPreparationTicks") : 100 + this.random.nextInt(120);
-        this.sleepCooldownTicks = tag.getInt("SleepCooldownTicks");
+        this.sleepPreparationTicks = tag.getIntOr("SleepPreparationTicks", 0);
+        this.requiredSleepPreparationTicks = tag.read("RequiredSleepPreparationTicks", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() ? tag.getIntOr("RequiredSleepPreparationTicks", 0) : 100 + this.random.nextInt(120);
+        this.sleepCooldownTicks = tag.getIntOr("SleepCooldownTicks", 0);
         this.beaverInventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(tag, this.beaverInventory, this.registryAccess());
+        ContainerHelper.loadAllItems(tag, this.beaverInventory);
     }
 
     @Override
@@ -493,12 +495,12 @@ public class BeaverEntity extends Animal {
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob other) {
-        return EntityTypeRegistry.BEAVER.get().create(level);
+        return EntityTypeRegistry.BEAVER.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Nullable
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, @Nullable SpawnGroupData spawnGroupData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason spawnType, @Nullable SpawnGroupData spawnGroupData) {
         this.damCooldownTicks = 24000 + this.random.nextInt(24001);
         this.requiredSleepPreparationTicks = 100 + this.random.nextInt(120);
         return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);

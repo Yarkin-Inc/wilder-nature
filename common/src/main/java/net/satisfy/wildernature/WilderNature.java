@@ -2,9 +2,8 @@ package net.satisfy.wildernature;
 
 import dev.architectury.platform.Platform;
 import dev.architectury.registry.ReloadListenerRegistry;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackType;
-import net.satisfy.wildernature.core.compat.AccessoriesCompat;
 import net.satisfy.wildernature.core.event.BountyEvents;
 import net.satisfy.wildernature.core.event.ThickLeatherScissorHandler;
 import net.satisfy.wildernature.core.event.VanillaBoneThrowEvent;
@@ -18,8 +17,8 @@ import net.satisfy.foundation.rarity.FoundationRarity;
 public class WilderNature {
     public static final String MOD_ID = "wildernature";
 
-    public static ResourceLocation identifier(String name) {
-        return ResourceLocation.fromNamespaceAndPath(MOD_ID, name);
+    public static Identifier identifier(String name) {
+        return Identifier.fromNamespaceAndPath(MOD_ID, name);
     }
 
     public static void init() {
@@ -36,10 +35,7 @@ public class WilderNature {
         RecipeRegistry.init();
         TabRegistry.init();
         SoundEventRegistry.init();
-        ReloadListenerRegistry.register(PackType.SERVER_DATA, FieldGuideDataLoader.INSTANCE);
-        if (Platform.isModLoaded("accessories")) {
-            AccessoriesCompat.init();
-        }
+        ReloadListenerRegistry.register(PackType.SERVER_DATA, FieldGuideDataLoader.INSTANCE, identifier("field_guide"));
         LifecycleEvent.SETUP.register(WilderNature::registerRarities);
     }
 

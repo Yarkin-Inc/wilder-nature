@@ -7,7 +7,7 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
-public class DenyParticle extends TextureSheetParticle {
+public class DenyParticle extends SingleQuadParticle {
     private static final int FADE_DURATION = 5;
 
     private final float swayPhase;
@@ -24,8 +24,8 @@ public class DenyParticle extends TextureSheetParticle {
     private float previousQuadSize;
     private float growthSpeed;
 
-    protected DenyParticle(ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
-        super(level, x, y, z, velocityX, velocityY, velocityZ);
+    protected DenyParticle(ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.client.renderer.texture.TextureAtlasSprite initialSprite) {
+        super(level, x, y, z, velocityX, velocityY, velocityZ, initialSprite);
         this.friction = 0.92F;
         this.gravity = 0.0F;
         this.hasPhysics = false;
@@ -98,8 +98,8 @@ public class DenyParticle extends TextureSheetParticle {
     }
 
     @Override
-    public @NotNull ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
+    public @NotNull SingleQuadParticle.Layer getLayer() {
+        return SingleQuadParticle.Layer.TRANSLUCENT;
     }
 
     public static class Provider implements ParticleProvider<SimpleParticleType> {
@@ -110,12 +110,12 @@ public class DenyParticle extends TextureSheetParticle {
         }
 
         @Override
-        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.util.RandomSource random) {
             if (!PlatformHelper.isEmoteParticlesEnabled()) {
                 return null;
             }
-            DenyParticle particle = new DenyParticle(level, x, y, z, velocityX, velocityY, velocityZ);
-            particle.pickSprite(this.spriteSet);
+            DenyParticle particle = new DenyParticle(level, x, y, z, velocityX, velocityY, velocityZ, this.spriteSet.get(random));
+            particle.setSprite(this.spriteSet.get(random));
             return particle;
         }
     }

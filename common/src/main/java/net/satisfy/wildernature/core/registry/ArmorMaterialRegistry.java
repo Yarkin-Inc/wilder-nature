@@ -1,35 +1,19 @@
 package net.satisfy.wildernature.core.registry;
 
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
+import java.util.Map;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.item.ArmorItem;
-import net.minecraft.world.item.ArmorMaterial;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.equipment.ArmorMaterial;
+import net.minecraft.world.item.equipment.ArmorType;
+import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.satisfy.wildernature.WilderNature;
 
-import java.util.EnumMap;
-import java.util.List;
-import java.util.function.Supplier;
-
-public class ArmorMaterialRegistry {
-    public static final Holder<ArmorMaterial> STYLIN_HAT;
-
-    static {
-        EnumMap<ArmorItem.Type, Integer> defense = new EnumMap<>(ArmorItem.Type.class);
-        defense.put(ArmorItem.Type.HELMET, 1);
-        defense.put(ArmorItem.Type.CHESTPLATE, 0);
-        defense.put(ArmorItem.Type.LEGGINGS, 0);
-        defense.put(ArmorItem.Type.BOOTS, 0);
-        defense.put(ArmorItem.Type.BODY, 0);
-
-        Supplier<Ingredient> repair = () -> Ingredient.of(Items.STRING);
-        List<ArmorMaterial.Layer> layers = List.of(new ArmorMaterial.Layer(WilderNature.identifier("stylin_purple_hat")));
-
-        STYLIN_HAT = Registry.registerForHolder(BuiltInRegistries.ARMOR_MATERIAL, WilderNature.identifier("stylin_hat"),
-                new ArmorMaterial(defense, 0, SoundEvents.ARMOR_EQUIP_LEATHER, repair, layers, 0.0F, 0.0F)
-        );
-    }
+public final class ArmorMaterialRegistry {
+    public static final ArmorMaterial STYLIN_HAT = new ArmorMaterial(5,
+        Map.of(ArmorType.HELMET, 1, ArmorType.CHESTPLATE, 0, ArmorType.LEGGINGS, 0, ArmorType.BOOTS, 0, ArmorType.BODY, 0),
+        0, SoundEvents.ARMOR_EQUIP_LEATHER, 0, 0,
+        TagKey.create(Registries.ITEM, WilderNature.identifier("repairs_stylin_hat")),
+        ResourceKey.create(EquipmentAssets.ROOT_ID, WilderNature.identifier("stylin_purple_hat")));
 }

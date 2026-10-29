@@ -14,7 +14,7 @@ public class MarkedPreyEffect extends MobEffect {
     }
 
     @Override
-    public boolean applyEffectTick(LivingEntity entity, int amplifier) {
+    public boolean applyEffectTick(net.minecraft.server.level.ServerLevel effectLevel, LivingEntity entity, int amplifier) {
         if (entity.level() instanceof ServerLevel serverLevel) {
             double dx = entity.getX() - entity.xOld;
             double dy = entity.getY() - entity.yOld;

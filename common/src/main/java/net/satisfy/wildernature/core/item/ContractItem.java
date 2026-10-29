@@ -5,9 +5,9 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -36,12 +36,12 @@ public class ContractItem extends Item {
             return super.getName(itemStack);
         }
 
-        String bountyType = customDataTag.getString("BountyType");
+        String bountyType = customDataTag.getStringOr("BountyType", "");
         return Component.translatable("gui.wildernature.bounty_board.title." + bountyType);
     }
 
     @Override
-    public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
+    public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltipComponents, TooltipFlag tooltipFlag) {
         CustomData customData = itemStack.get(DataComponents.CUSTOM_DATA);
         if (customData == null) {
             return;
@@ -53,22 +53,22 @@ public class ContractItem extends Item {
         }
 
         Component targetName = this.getTargetName(customDataTag);
-        String bountyType = customDataTag.getString("BountyType");
-        int requiredAmount = customDataTag.contains("RequiredAmount") ? customDataTag.getInt("RequiredAmount") : 0;
-        int currentProgress = customDataTag.contains("Progress") ? customDataTag.getInt("Progress") : 0;
+        String bountyType = customDataTag.getStringOr("BountyType", "");
+        int requiredAmount = customDataTag.contains("RequiredAmount") ? customDataTag.getIntOr("RequiredAmount", 0) : 0;
+        int currentProgress = customDataTag.contains("Progress") ? customDataTag.getIntOr("Progress", 0) : 0;
         boolean isCompleted = currentProgress >= requiredAmount && requiredAmount > 0;
 
         if (isCompleted) {
-            tooltipComponents.add(Component.translatable("item.wildernature.contract.completed").copy().withStyle(ChatFormatting.GRAY));
-            tooltipComponents.add(Component.translatable("item.wildernature.contract.turn_in").copy().withStyle(ChatFormatting.GREEN));
+            tooltipComponents.accept(Component.translatable("item.wildernature.contract.completed").copy().withStyle(ChatFormatting.GRAY));
+            tooltipComponents.accept(Component.translatable("item.wildernature.contract.turn_in").copy().withStyle(ChatFormatting.GREEN));
             return;
         }
 
-        int previewCount = customDataTag.contains("PreviewCount") ? customDataTag.getInt("PreviewCount") : 1;
-        int experienceReward = customDataTag.contains("ExperienceReward") ? customDataTag.getInt("ExperienceReward") : 0;
+        int previewCount = customDataTag.contains("PreviewCount") ? customDataTag.getIntOr("PreviewCount", 0) : 1;
+        int experienceReward = customDataTag.contains("ExperienceReward") ? customDataTag.getIntOr("ExperienceReward", 0) : 0;
 
-        tooltipComponents.add(this.getObjectiveComponent(bountyType, requiredAmount, targetName).copy().withStyle(ChatFormatting.GRAY));
-        tooltipComponents.add(
+        tooltipComponents.accept(this.getObjectiveComponent(bountyType, requiredAmount, targetName).copy().withStyle(ChatFormatting.GRAY));
+        tooltipComponents.accept(
                 Component.translatable("gui.wildernature.bounty_board.progress")
                         .copy()
                         .append(Component.literal(": "))
@@ -77,13 +77,13 @@ public class ContractItem extends Item {
         );
 
         if (customDataTag.contains("PreviewItemId")) {
-            ResourceLocation previewItemId = ResourceLocation.parse(customDataTag.getString("PreviewItemId"));
-            Item previewItem = BuiltInRegistries.ITEM.get(previewItemId);
+            Identifier previewItemId = Identifier.parse(customDataTag.getStringOr("PreviewItemId", ""));
+            Item previewItem = BuiltInRegistries.ITEM.getValue(previewItemId);
             ItemStack rewardStack = new ItemStack(previewItem);
             Component rewardName = rewardStack.getHoverName();
             Component rewardLine = previewCount > 1 ? Component.literal(previewCount + "x ").append(rewardName) : rewardName;
 
-            tooltipComponents.add(
+            tooltipComponents.accept(
                     Component.translatable("gui.wildernature.bounty_board.reward")
                             .copy()
                             .append(Component.literal(": "))
@@ -93,7 +93,7 @@ public class ContractItem extends Item {
         }
 
         if (experienceReward > 0) {
-            tooltipComponents.add(
+            tooltipComponents.accept(
                     Component.translatable("gui.wildernature.bounty_board.experience")
                             .copy()
                             .append(Component.literal(": "))
@@ -104,8 +104,8 @@ public class ContractItem extends Item {
     }
 
     @Override
-    public @NotNull InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        return InteractionResultHolder.pass(player.getItemInHand(hand));
+    public @NotNull InteractionResult use(Level level, Player player, InteractionHand hand) {
+        return InteractionResult.PASS; //player.getItemInHand(hand));
     }
 
     private Component getObjectiveComponent(String bountyType, int requiredAmount, Component targetName) {
@@ -121,18 +121,18 @@ public class ContractItem extends Item {
     }
 
     private Component getTargetName(CompoundTag customDataTag) {
-        String targetType = customDataTag.getString("TargetType");
-        ResourceLocation targetId = ResourceLocation.parse(customDataTag.getString("TargetId"));
+        String targetType = customDataTag.getStringOr("TargetType", "");
+        Identifier targetId = Identifier.parse(customDataTag.getStringOr("TargetId", ""));
 
         return switch (targetType) {
             case "entity" -> {
                 if (BuiltInRegistries.ENTITY_TYPE.containsKey(targetId)) {
-                    EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(targetId);
+                    EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.getValue(targetId);
                     yield entityType.getDescription();
                 }
                 yield Component.literal(targetId.getPath());
             }
-            case "item" -> new ItemStack(BuiltInRegistries.ITEM.get(targetId)).getHoverName();
+            case "item" -> new ItemStack(BuiltInRegistries.ITEM.getValue(targetId)).getHoverName();
             case "biome" -> Component.translatable("biome." + targetId.getNamespace() + "." + targetId.getPath());
             default -> Component.literal(targetId.getPath());
         };

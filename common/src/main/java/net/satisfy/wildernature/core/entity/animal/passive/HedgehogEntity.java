@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.passive;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -7,7 +9,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -72,7 +74,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MOVEMENT_SPEED, 0.13D)
                 .add(Attributes.MAX_HEALTH, 6.0D);
     }
@@ -165,7 +167,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
         if (!this.isAvailableForNormalBehavior()) {
             return 0.0F;
         }
-        return this.level().isNight() ? 0.012F : 0.003F;
+        return this.level().isDarkOutside() ? 0.012F : 0.003F;
     }
 
     private void consumeWildMushroom(Level level, BlockPos pos, BlockState state) {
@@ -271,8 +273,8 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
                     serverLevel.sendParticles(ParticleTypes.POOF, this.getX(), this.getY() + 0.2D, this.getZ(), 5, 0.15D, 0.1D, 0.15D, 0.0D);
                 }
 
-                this.kill();
-                nearbyPlayer.hurt(this.level().damageSources().generic(), 3.0F);
+                this.kill((net.minecraft.server.level.ServerLevel) level());
+                nearbyPlayer.hurtOrSimulate(this.level().damageSources().generic(), 3.0F);
                 return;
             }
         }
@@ -333,7 +335,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
         if (!this.onGround()) {
             return false;
         }
-        if (this.isInWaterOrBubble()) {
+        if (this.isInWater()) {
             return false;
         }
         return this.hasNearbyThreat();
@@ -374,20 +376,20 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
     }
 
     private boolean isThreateningItem(ItemStack itemStack) {
-        return itemStack.getItem() instanceof SwordItem
-                || itemStack.getItem() instanceof AxeItem
+        return itemStack.is(net.minecraft.tags.ItemTags.SWORDS)
+                || itemStack.is(net.minecraft.tags.ItemTags.AXES)
                 || itemStack.getItem() instanceof BowItem
                 || itemStack.getItem() instanceof CrossbowItem;
     }
 
     private boolean canStartSleeping() {
-        if (!this.level().isDay()) {
+        if (!this.level().isBrightOutside()) {
             return false;
         }
         if (this.isBaby() || this.isInLove() || this.isPanicking()) {
             return false;
         }
-        if (!this.onGround() || this.isInWaterOrBubble()) {
+        if (!this.onGround() || this.isInWater()) {
             return false;
         }
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-4D) {
@@ -402,8 +404,8 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
     private boolean shouldWakeUp() {
         return this.hurtTime > 0
                 || this.hasNearbyThreat()
-                || !this.level().isDay()
-                || this.isInWaterOrBubble()
+                || !this.level().isBrightOutside()
+                || this.isInWater()
                 || this.isPanicking()
                 || this.isSniffing()
                 || this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-3D;
@@ -491,7 +493,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float amount) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float amount) {
         this.wakeUp();
         this.setSniffing(false);
 
@@ -501,12 +503,12 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
             }
         }
 
-        boolean wasHurt = super.hurt(damageSource, amount);
+        boolean wasHurt = super.hurtServer(serverLevel, damageSource, amount);
 
         if (wasHurt && !damageSource.is(DamageTypeTags.IS_PROJECTILE)) {
             Entity directEntity = damageSource.getDirectEntity();
             if (directEntity instanceof LivingEntity livingEntity) {
-                livingEntity.hurt(this.level().damageSources().cactus(), 1.0F);
+                livingEntity.hurtOrSimulate(this.level().damageSources().cactus(), 1.0F);
             }
 
             this.curledTicks = CURLED_DURATION_TICKS;
@@ -525,7 +527,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
         }
 
         if (entity instanceof LivingEntity livingEntity && !(entity instanceof HedgehogEntity) && !livingEntity.isInvulnerable()) {
-            livingEntity.hurt(this.level().damageSources().cactus(), 1.0F);
+            livingEntity.hurtOrSimulate(this.level().damageSources().cactus(), 1.0F);
         }
     }
 
@@ -635,7 +637,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.HEDGEHOG.get().create(serverLevel);
+        return EntityTypeRegistry.HEDGEHOG.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -648,7 +650,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compoundTag) {
+    public void addAdditionalSaveData(ValueOutput compoundTag) {
         super.addAdditionalSaveData(compoundTag);
         compoundTag.putInt("CurledTicks", this.curledTicks);
         compoundTag.putInt("NoAnimationTicks", this.noAnimationTicks);
@@ -663,18 +665,18 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compoundTag) {
+    public void readAdditionalSaveData(ValueInput compoundTag) {
         super.readAdditionalSaveData(compoundTag);
-        this.curledTicks = compoundTag.getInt("CurledTicks");
-        this.noAnimationTicks = compoundTag.getInt("NoAnimationTicks");
-        this.milkRejectionCooldownTicks = compoundTag.getInt("MilkRejectionCooldownTicks");
-        this.sleepTicks = compoundTag.getInt("SleepTicks");
-        this.threatCheckCooldownTicks = compoundTag.getInt("ThreatCheckCooldownTicks");
-        this.cachedNearbyThreat = compoundTag.getBoolean("CachedNearbyThreat");
-        this.setCurled(compoundTag.getBoolean("Curled"));
-        this.setSleepingState(compoundTag.getBoolean("Sleeping"));
-        this.setPlayingNoAnimation(compoundTag.getBoolean("PlayingNoAnimation"));
-        this.setSniffing(compoundTag.getBoolean("Sniffing"));
+        this.curledTicks = compoundTag.getIntOr("CurledTicks", 0);
+        this.noAnimationTicks = compoundTag.getIntOr("NoAnimationTicks", 0);
+        this.milkRejectionCooldownTicks = compoundTag.getIntOr("MilkRejectionCooldownTicks", 0);
+        this.sleepTicks = compoundTag.getIntOr("SleepTicks", 0);
+        this.threatCheckCooldownTicks = compoundTag.getIntOr("ThreatCheckCooldownTicks", 0);
+        this.cachedNearbyThreat = compoundTag.getBooleanOr("CachedNearbyThreat", false);
+        this.setCurled(compoundTag.getBooleanOr("Curled", false));
+        this.setSleepingState(compoundTag.getBooleanOr("Sleeping", false));
+        this.setPlayingNoAnimation(compoundTag.getBooleanOr("PlayingNoAnimation", false));
+        this.setSniffing(compoundTag.getBooleanOr("Sniffing", false));
     }
 
     @Override
@@ -712,7 +714,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
                 this.milkRejectionCooldownTicks = MILK_REJECTION_COOLDOWN_TICKS;
                 ((ServerLevel) this.level()).sendParticles(ParticleTypeRegistry.DENY.get(), this.getX(), this.getY() + 0.35D, this.getZ(), 1, 0.1D, 0.1D, 0.1D, 0.0D);
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide());
+            return InteractionResult.SUCCESS;
         }
 
         if (this.isFood(heldItem) && this.getAge() == 0 && !this.level().isClientSide()) {
@@ -752,7 +754,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
             if (this.hedgehog.isBaby()) {
                 return false;
             }
-            if (this.hedgehog.level().isDay()) {
+            if (this.hedgehog.level().isBrightOutside()) {
                 return false;
             }
             if (this.searchCooldownTicks > 0) {
@@ -769,7 +771,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
         public boolean canContinueToUse() {
             return this.targetMushroomPos != null
                     && this.hedgehog.isAvailableForNormalBehavior()
-                    && !this.hedgehog.level().isDay()
+                    && !this.hedgehog.level().isBrightOutside()
                     && this.isValidMushroom(this.targetMushroomPos);
         }
 
@@ -864,7 +866,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
                 return true;
             }
 
-            return BuiltInRegistries.BLOCK.getOptional(ResourceLocation.parse("farm_and_charm:fertilized_soil"))
+            return BuiltInRegistries.BLOCK.getOptional(Identifier.parse("farm_and_charm:fertilized_soil"))
                     .map(belowState::is)
                     .orElse(false);
         }
@@ -882,7 +884,7 @@ public class HedgehogEntity extends Animal implements CacheEatingMob, RandomActi
 
             level.levelEvent(2001, blockPos, net.minecraft.world.level.block.Block.getId(oldState));
             level.setBlock(blockPos, colonyState, 2);
-            level.playSound(null, blockPos, SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 0.7F, 0.9F + level.random.nextFloat() * 0.2F);
+            level.playSound(null, blockPos, SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 0.7F, 0.9F + level.getRandom().nextFloat() * 0.2F);
 
             if (level instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, blockPos.getX() + 0.5D, blockPos.getY() + 0.3D, blockPos.getZ() + 0.5D, 3, 0.15D, 0.1D, 0.15D, 0.0D);

@@ -1,12 +1,8 @@
 {
   "type": "minecraft:crafting_shapeless",
   "ingredients": [
-    {
-      "item": "minecraft:gunpowder"
-    },
-    {
-      "item": "minecraft:diamond"
-    }
+    "minecraft:gunpowder",
+    "minecraft:diamond"
   ],
   "result": {
     "id": "wildernature:diamond_ammunition",

@@ -1,6 +1,6 @@
 package net.satisfy.wildernature.core.event;
 
-import dev.architectury.event.CompoundEventResult;
+import dev.architectury.event.EventResult;
 import dev.architectury.event.events.common.InteractionEvent;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -28,20 +28,20 @@ public class ThickLeatherScissorHandler {
         InteractionEvent.RIGHT_CLICK_ITEM.register(ThickLeatherScissorHandler::onRightClickItem);
     }
 
-    private static CompoundEventResult<ItemStack> onRightClickItem(Player player, InteractionHand hand) {
+    private static EventResult onRightClickItem(Player player, InteractionHand hand) {
         ItemStack heldStack = player.getItemInHand(hand);
 
         if (!heldStack.is(Items.SHEARS)) {
-            return CompoundEventResult.pass();
+            return EventResult.pass();
         }
 
         if (player.level().isClientSide()) {
-            return CompoundEventResult.pass();
+            return EventResult.pass();
         }
 
         Optional<ItemEntity> foundEntity = findThickLeatherInSight(player);
         if (foundEntity.isEmpty()) {
-            return CompoundEventResult.pass();
+            return EventResult.pass();
         }
 
         ItemEntity thickLeatherEntity = foundEntity.get();
@@ -56,7 +56,7 @@ public class ThickLeatherScissorHandler {
         }
 
         serverLevel.sendParticles(
-                new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.LEATHER)),
+                new ItemParticleOption(ParticleTypes.ITEM, Items.LEATHER),
                 thickLeatherEntity.getX(),
                 thickLeatherEntity.getY() + 0.2D,
                 thickLeatherEntity.getZ(),
@@ -86,7 +86,7 @@ public class ThickLeatherScissorHandler {
                 : EquipmentSlot.OFFHAND;
         heldStack.hurtAndBreak(1, player, shearsSlot);
 
-        return CompoundEventResult.interruptTrue(heldStack);
+        return EventResult.interruptTrue();
     }
 
     private static Optional<ItemEntity> findThickLeatherInSight(Player player) {

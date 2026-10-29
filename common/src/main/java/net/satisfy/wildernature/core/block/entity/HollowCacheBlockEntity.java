@@ -40,13 +40,13 @@ public class HollowCacheBlockEntity extends RandomizableContainerBlockEntity {
             @Override
             protected void onOpen(Level level, BlockPos pos, BlockState state) {
                 HollowCacheBlock.setOpen(state, level, pos, true);
-                level.playSound(null, pos, SoundEvents.WOOD_STEP, SoundSource.BLOCKS, 0.8F, 0.9F + level.random.nextFloat() * 0.2F);
+                level.playSound(null, pos, SoundEvents.WOOD_STEP, SoundSource.BLOCKS, 0.8F, 0.9F + level.getRandom().nextFloat() * 0.2F);
             }
 
             @Override
             protected void onClose(Level level, BlockPos pos, BlockState state) {
                 HollowCacheBlock.setOpen(state, level, pos, false);
-                level.playSound(null, pos, SoundEvents.WOOD_PLACE, SoundSource.BLOCKS, 0.8F, 0.9F + level.random.nextFloat() * 0.2F);
+                level.playSound(null, pos, SoundEvents.WOOD_PLACE, SoundSource.BLOCKS, 0.8F, 0.9F + level.getRandom().nextFloat() * 0.2F);
                 HollowCacheBlockEntity.this.scheduleCloseParticles();
             }
 
@@ -55,7 +55,7 @@ public class HollowCacheBlockEntity extends RandomizableContainerBlockEntity {
             }
 
             @Override
-            protected boolean isOwnContainer(Player player) {
+            public boolean isOwnContainer(Player player) {
                 if (player.containerMenu instanceof ChestMenu chestMenu) {
                     Container container = chestMenu.getContainer();
                     return container == HollowCacheBlockEntity.this;
@@ -129,22 +129,22 @@ public class HollowCacheBlockEntity extends RandomizableContainerBlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
-        super.saveAdditional(compoundTag, provider);
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput compoundTag) {
+        super.saveAdditional(compoundTag);
         if (!this.trySaveLootTable(compoundTag)) {
-            ContainerHelper.saveAllItems(compoundTag, this.inventory, provider);
+            ContainerHelper.saveAllItems(compoundTag, this.inventory);
         }
         compoundTag.putInt("PendingCloseParticlesTicks", this.pendingCloseParticlesTicks);
     }
 
     @Override
-    protected void loadAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
-        super.loadAdditional(compoundTag, provider);
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput compoundTag) {
+        super.loadAdditional(compoundTag);
         this.inventory = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         if (!this.tryLoadLootTable(compoundTag)) {
-            ContainerHelper.loadAllItems(compoundTag, this.inventory, provider);
+            ContainerHelper.loadAllItems(compoundTag, this.inventory);
         }
-        this.pendingCloseParticlesTicks = compoundTag.getInt("PendingCloseParticlesTicks");
+        this.pendingCloseParticlesTicks = compoundTag.getIntOr("PendingCloseParticlesTicks", 0);
     }
 
     @Override
@@ -199,14 +199,16 @@ public class HollowCacheBlockEntity extends RandomizableContainerBlockEntity {
     }
 
     @Override
-    public void startOpen(Player player) {
+    public void startOpen(net.minecraft.world.entity.ContainerUser user) {
+        net.minecraft.world.entity.LivingEntity player = user.getLivingEntity();
         if (!this.remove && !player.isSpectator()) {
-            this.stateManager.incrementOpeners(player, this.getLevel(), this.getBlockPos(), this.getBlockState());
+            this.stateManager.incrementOpeners(player, this.getLevel(), this.getBlockPos(), this.getBlockState(), user.getContainerInteractionRange());
         }
     }
 
     @Override
-    public void stopOpen(Player player) {
+    public void stopOpen(net.minecraft.world.entity.ContainerUser user) {
+        net.minecraft.world.entity.LivingEntity player = user.getLivingEntity();
         if (!this.remove && !player.isSpectator()) {
             this.stateManager.decrementOpeners(player, this.getLevel(), this.getBlockPos(), this.getBlockState());
         }

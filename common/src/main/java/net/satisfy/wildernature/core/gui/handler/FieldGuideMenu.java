@@ -14,7 +14,11 @@ public class FieldGuideMenu extends AbstractContainerMenu {
 
     public FieldGuideMenu(int containerId, FriendlyByteBuf friendlyByteBuf) {
         super(MenuTypeRegistry.FIELD_GUIDE_MENU.get(), containerId);
-        this.entries = friendlyByteBuf.readList(FieldGuideEntry::read);
+        int count = friendlyByteBuf.readVarInt();
+        if (count < 0 || count > 4096) throw new IllegalArgumentException("Invalid field guide size");
+        var entries = new java.util.ArrayList<FieldGuideEntry>(count);
+        for (int i = 0; i < count; i++) entries.add(FieldGuideEntry.read(friendlyByteBuf));
+        this.entries = java.util.List.copyOf(entries);
     }
 
     public FieldGuideMenu(int containerId, List<FieldGuideEntry> entries) {

@@ -5,7 +5,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -26,14 +26,14 @@ public class LootBagItem extends Item {
 
     @Override
     @SuppressWarnings("deprecation")
-    public @NotNull InteractionResultHolder<ItemStack> use(Level world, Player user, InteractionHand hand) {
-        if (world.isClientSide || user.isCrouching()) {
+    public @NotNull InteractionResult use(Level world, Player user, InteractionHand hand) {
+        if (world.isClientSide() || user.isCrouching()) {
             return super.use(world, user, hand);
         }
 
         ItemStack itemStack = user.getItemInHand(hand);
         ItemStack spawnedItem;
-        int randomNumber = world.random.nextInt(10000);
+        int randomNumber = world.getRandom().nextInt(10000);
 
         if (randomNumber < 5) {
             spawnedItem = new ItemStack(Items.DIAMOND);
@@ -49,7 +49,7 @@ public class LootBagItem extends Item {
                 }
             }
             if (!edibleItems.isEmpty()) {
-                spawnedItem = new ItemStack(edibleItems.get(world.random.nextInt(edibleItems.size())));
+                spawnedItem = new ItemStack(edibleItems.get(world.getRandom().nextInt(edibleItems.size())));
             } else {
                 spawnedItem = new ItemStack(Items.APPLE);
             }
@@ -62,6 +62,6 @@ public class LootBagItem extends Item {
         }
 
         world.playSound(null, user.getX(), user.getY(), user.getZ(), SoundEvents.BUNDLE_INSERT, SoundSource.PLAYERS, 1.0F, 1.0F);
-        return InteractionResultHolder.sidedSuccess(itemStack, world.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 }

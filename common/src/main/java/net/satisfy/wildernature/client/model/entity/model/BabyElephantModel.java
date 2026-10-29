@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.ElephantRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -12,7 +12,7 @@ import net.satisfy.wildernature.client.model.entity.animation.BabyElephantAnimat
 import net.satisfy.wildernature.core.entity.animal.defensive.ElephantEntity;
 import org.jetbrains.annotations.NotNull;
 
-public class BabyElephantModel<T extends ElephantEntity> extends HierarchicalModel<T> {
+public class BabyElephantModel<T extends ElephantRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("baby_elephant"), "main");
 
     private final ModelPart base;
@@ -20,6 +20,7 @@ public class BabyElephantModel<T extends ElephantEntity> extends HierarchicalMod
 
     @SuppressWarnings("unused")
     public BabyElephantModel(ModelPart root) {
+        super(root);
         this.base = root.getChild("base");
         ModelPart hips = this.base.getChild("hips");
         ModelPart torso = hips.getChild("torso");
@@ -74,7 +75,12 @@ public class BabyElephantModel<T extends ElephantEntity> extends HierarchicalMod
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         this.head.yRot += netHeadYaw * ((float) Math.PI / 180F) * 0.35F;
@@ -91,13 +97,7 @@ public class BabyElephantModel<T extends ElephantEntity> extends HierarchicalMod
         }
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.base.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.base;
-    }
+
+
 }

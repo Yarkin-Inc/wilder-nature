@@ -11,26 +11,25 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
+
+
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.satisfy.wildernature.WilderNature;
 import net.satisfy.wildernature.core.block.HollowCacheBlock;
 import net.satisfy.wildernature.core.block.entity.HollowCacheBlockEntity;
 import net.satisfy.wildernature.core.registry.ObjectRegistry;
 
-public class HollowCacheFeature extends Feature<NoneFeatureConfiguration> {
+public class HollowCacheFeature implements Feature {
     private static final ResourceKey<LootTable> HOLLOW_CACHE_LOOT_TABLE = ResourceKey.create(Registries.LOOT_TABLE, WilderNature.identifier("chests/hollow_cache"));
 
-    public HollowCacheFeature(Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
-    }
+    public static final com.mojang.serialization.MapCodec<HollowCacheFeature> CODEC = com.mojang.serialization.MapCodec.unit(HollowCacheFeature::new);
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel level = context.level();
-        RandomSource randomSource = context.random();
-        BlockPos blockPos = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, context.origin());
+    public com.mojang.serialization.MapCodec<HollowCacheFeature> codec() { return CODEC; }
+
+    @Override
+    public boolean place(WorldGenLevel level, net.minecraft.world.level.chunk.ChunkGenerator generator, RandomSource randomSource, BlockPos origin) {
+        BlockPos blockPos = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, origin);
 
         if (!level.isEmptyBlock(blockPos)) return false;
 

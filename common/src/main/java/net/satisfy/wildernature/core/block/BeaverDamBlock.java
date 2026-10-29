@@ -29,11 +29,10 @@ import net.satisfy.wildernature.platform.PlatformHelper;
 import org.jetbrains.annotations.NotNull;
 
 public class BeaverDamBlock extends Block implements SimpleWaterloggedBlock {
-    public static final MapCodec<BeaverDamBlock> CODEC = simpleCodec(BeaverDamBlock::new);
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
     public BeaverDamBlock() {
-        this(BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.DESTROY));
+        this(BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.POPPED));
     }
 
     public BeaverDamBlock(BlockBehaviour.Properties properties) {
@@ -41,10 +40,7 @@ public class BeaverDamBlock extends Block implements SimpleWaterloggedBlock {
         this.registerDefaultState(this.stateDefinition.any().setValue(WATERLOGGED, false));
     }
 
-    @Override
-    protected @NotNull MapCodec<? extends BeaverDamBlock> codec() {
-        return CODEC;
-    }
+
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
@@ -104,7 +100,7 @@ public class BeaverDamBlock extends Block implements SimpleWaterloggedBlock {
     }
 
     @Override
-    protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+    protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity, net.minecraft.world.entity.InsideBlockEffectApplier effects, boolean wasInside) {
         entity.makeStuckInBlock(state, new Vec3(0.85D, 0.85D, 0.85D));
     }
 }

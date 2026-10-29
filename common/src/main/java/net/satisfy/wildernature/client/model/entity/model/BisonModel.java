@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.BisonRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -13,7 +13,7 @@ import net.satisfy.wildernature.core.entity.animal.defensive.BisonEntity;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
-public class BisonModel<T extends BisonEntity> extends HierarchicalModel<T> {
+public class BisonModel<T extends BisonRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("bison"), "main");
 
     private final ModelPart root;
@@ -23,6 +23,7 @@ public class BisonModel<T extends BisonEntity> extends HierarchicalModel<T> {
     private boolean baby;
 
     public BisonModel(ModelPart root) {
+        super(root);
         this.root = root;
         ModelPart bison = root.getChild("bison");
         this.body = bison.getChild("Body");
@@ -81,7 +82,12 @@ public class BisonModel<T extends BisonEntity> extends HierarchicalModel<T> {
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
         this.baby = entity.isBaby();
 
@@ -92,31 +98,17 @@ public class BisonModel<T extends BisonEntity> extends HierarchicalModel<T> {
         this.animate(entity.snortAnimationState, BisonAnimation.snort, ageInTicks, 1.0F);
         this.animate(entity.grazeAnimationState, BisonAnimation.graze, ageInTicks, 1.0F);
         this.animate(entity.sleepAnimationState, BisonAnimation.sleep, ageInTicks, 1.0F);
-    }
-
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int alpha) {
         if (this.baby) {
-            boolean headVisible = this.head.visible;
-            this.head.visible = false;
-            this.root.render(poseStack, vertexConsumer, packedLight, packedOverlay, alpha);
-            this.head.visible = headVisible;
-
-            poseStack.pushPose();
-            this.body.translateAndRotate(poseStack);
-            poseStack.translate(0.0D, 1.25D, 0.5D);
-            poseStack.scale(1.85F, 1.85F, 1.85F);
-            this.head.render(poseStack, vertexConsumer, packedLight, packedOverlay, alpha);
-            poseStack.popPose();
-            return;
+            this.head.x *= 1.85F;
+            this.head.y = this.head.y * 1.85F + 20.0F;
+            this.head.z = this.head.z * 1.85F + 8.0F;
+            this.head.xScale = this.head.yScale = this.head.zScale = 1.85F;
         }
-        this.root.render(poseStack, vertexConsumer, packedLight, packedOverlay, alpha);
     }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.root;
-    }
+
+
+
 
     public ModelPart head() {
         return this.head;

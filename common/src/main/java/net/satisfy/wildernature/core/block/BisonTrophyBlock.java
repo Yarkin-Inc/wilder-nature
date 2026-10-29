@@ -1,6 +1,6 @@
 package net.satisfy.wildernature.core.block;
 
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -63,7 +63,7 @@ public class BisonTrophyBlock extends WallDecorationBlock {
 
     @Override
     protected @NotNull InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult blockHitResult) {
-        if (!world.isClientSide) {
+        if (!world.isClientSide()) {
             long currentTime = System.currentTimeMillis();
             Long lastUsed = lastUseTime.getOrDefault(player, 0L);
             if (currentTime - lastUsed < 180000) {
@@ -83,8 +83,8 @@ public class BisonTrophyBlock extends WallDecorationBlock {
 
             for (int particleIndex = 0; particleIndex < 18; particleIndex++) {
                 double distance = 0.35D + particleIndex * 0.22D;
-                double spreadX = facing.getAxis() == Direction.Axis.Z ? (serverLevel.random.nextDouble() - 0.5D) * 0.8D : (serverLevel.random.nextDouble() - 0.5D) * 0.18D;
-                double spreadZ = facing.getAxis() == Direction.Axis.X ? (serverLevel.random.nextDouble() - 0.5D) * 0.8D : (serverLevel.random.nextDouble() - 0.5D) * 0.18D;
+                double spreadX = facing.getAxis() == Direction.Axis.Z ? (serverLevel.getRandom().nextDouble() - 0.5D) * 0.8D : (serverLevel.getRandom().nextDouble() - 0.5D) * 0.18D;
+                double spreadZ = facing.getAxis() == Direction.Axis.X ? (serverLevel.getRandom().nextDouble() - 0.5D) * 0.8D : (serverLevel.getRandom().nextDouble() - 0.5D) * 0.18D;
                 double particleX = baseX + pushX * distance + spreadX;
                 double particleZ = baseZ + pushZ * distance + spreadZ;
                 serverLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.COARSE_DIRT.defaultBlockState()), particleX, pos.getY() + 0.15D, particleZ, 2, 0.08D, 0.04D, 0.08D, 0.01D);
@@ -112,13 +112,13 @@ public class BisonTrophyBlock extends WallDecorationBlock {
 
                 double strength = Math.max(0.12D, 0.55D - distance * 0.06D);
                 entity.push(pushX * strength, 0.08D, pushZ * strength);
-                entity.hurtMarked = true;
+                entity.syncVelocity = true;
             }
 
-            player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 60, 0, false, false, true));
-            player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 80, 0, false, false, true));
+            player.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 60, 0, false, false, true));
+            player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 80, 0, false, false, true));
         }
 
-        return InteractionResult.sidedSuccess(world.isClientSide);
+        return InteractionResult.SUCCESS;
     }
 }

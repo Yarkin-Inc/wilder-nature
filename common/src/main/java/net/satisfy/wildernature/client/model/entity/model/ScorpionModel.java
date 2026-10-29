@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.ScorpionRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -14,7 +14,7 @@ import net.satisfy.wildernature.core.entity.animal.tameable.ScorpionEntity;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
-public class ScorpionModel<T extends ScorpionEntity> extends HierarchicalModel<T> {
+public class ScorpionModel<T extends ScorpionRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("scorpion"), "main");
 
     private final ModelPart root;
@@ -22,6 +22,7 @@ public class ScorpionModel<T extends ScorpionEntity> extends HierarchicalModel<T
     private final ModelPart tail;
 
     public ScorpionModel(ModelPart root) {
+        super(root);
         this.root = root;
         this.scorpion = root.getChild("scorpion");
         this.tail = this.scorpion.getChild("torso").getChild("tail");
@@ -86,7 +87,12 @@ public class ScorpionModel<T extends ScorpionEntity> extends HierarchicalModel<T
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root.getAllParts().forEach(ModelPart::resetPose);
         this.animate(entity.idleState, ScorpionAnimation.idle, ageInTicks, 1.0F);
         this.animateWalk(ScorpionAnimation.walk, limbSwing, limbSwingAmount, 2.0F, 2.0F);
@@ -101,13 +107,7 @@ public class ScorpionModel<T extends ScorpionEntity> extends HierarchicalModel<T
         }
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.root.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.root;
-    }
+
+
 }

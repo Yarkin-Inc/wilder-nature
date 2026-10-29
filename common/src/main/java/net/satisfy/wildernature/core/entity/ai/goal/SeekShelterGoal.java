@@ -37,7 +37,7 @@ public class SeekShelterGoal<T extends PathfinderMob & ShelteringMob> extends Go
             return false;
         }
 
-        if (this.mob.level().isDay()) {
+        if (this.mob.level().isBrightOutside()) {
             return false;
         }
 
@@ -57,7 +57,7 @@ public class SeekShelterGoal<T extends PathfinderMob & ShelteringMob> extends Go
 
     @Override
     public boolean canContinueToUse() {
-        if (this.mob.level().isDay() || this.mob.isPanicking()) {
+        if (this.mob.level().isBrightOutside() || this.mob.isPanicking()) {
             return false;
         }
 
@@ -306,6 +306,6 @@ public class SeekShelterGoal<T extends PathfinderMob & ShelteringMob> extends Go
             return false;
         }
 
-        return level.getBlockState(standPos.below()).isSolidRender(level, standPos.below());
+        return level.getBlockState(standPos.below()).isSolidRender();
     }
 }

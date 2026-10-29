@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.HedgehogRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -12,7 +12,7 @@ import net.satisfy.wildernature.client.model.entity.animation.HedgehogAnimation;
 import net.satisfy.wildernature.core.entity.animal.passive.HedgehogEntity;
 import org.jetbrains.annotations.NotNull;
 
-public class HedgehogModel<T extends HedgehogEntity> extends HierarchicalModel<T> {
+public class HedgehogModel<T extends HedgehogRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("hedgehog"), "main");
 
     private final ModelPart root;
@@ -25,6 +25,7 @@ public class HedgehogModel<T extends HedgehogEntity> extends HierarchicalModel<T
     private final ModelPart rightLeg;
 
     public HedgehogModel(ModelPart root) {
+        super(root);
         this.root = root;
         this.hedgehog = root.getChild("hedgehog");
         this.curled = this.hedgehog.getChild("curled");
@@ -88,7 +89,12 @@ public class HedgehogModel<T extends HedgehogEntity> extends HierarchicalModel<T
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         boolean isCurled = entity.isCurled();
@@ -117,13 +123,7 @@ public class HedgehogModel<T extends HedgehogEntity> extends HierarchicalModel<T
         this.animate(entity.sleepAnimationState, HedgehogAnimation.sleep, ageInTicks, 1.0F);
     }
 
-    @Override
-    public void renderToBuffer(PoseStack matrices, VertexConsumer vertexConsumer, int light, int overlay, int alpha) {
-        this.root.render(matrices, vertexConsumer, light, overlay, alpha);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.root;
-    }
+
+
 }

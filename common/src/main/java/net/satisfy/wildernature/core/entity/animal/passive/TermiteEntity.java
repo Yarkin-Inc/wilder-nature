@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.passive;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -54,7 +56,7 @@ public class TermiteEntity extends Monster {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Monster.createMonsterAttributes()
+        return Monster.createMonsterAttributes().add(Attributes.TEMPT_RANGE)
                 .add(Attributes.MAX_HEALTH, 4.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.22D)
                 .add(Attributes.ATTACK_DAMAGE, 1.0D)
@@ -196,13 +198,13 @@ public class TermiteEntity extends Monster {
     protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
         super.dropCustomDeathLoot(level, damageSource, recentlyHit);
         if (recentlyHit && this.hasWoodmeal()) {
-            this.spawnAtLocation(new ItemStack(ObjectRegistry.WOODMEAL.get()));
+            this.spawnAtLocation((net.minecraft.server.level.ServerLevel) level(), new ItemStack(ObjectRegistry.WOODMEAL.get()));
             this.setHasWoodmeal(false);
         }
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         tag.putBoolean("ReturningToMound", this.isReturningToMound());
         tag.putBoolean("HasWoodmeal", this.hasWoodmeal());
@@ -214,13 +216,13 @@ public class TermiteEntity extends Monster {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        this.setReturningToMound(tag.getBoolean("ReturningToMound"));
-        this.setHasWoodmeal(tag.getBoolean("HasWoodmeal"));
+        this.setReturningToMound(tag.getBooleanOr("ReturningToMound", false));
+        this.setHasWoodmeal(tag.getBooleanOr("HasWoodmeal", false));
 
-        if (tag.contains("MoundX")) {
-            this.setMoundPos(new BlockPos(tag.getInt("MoundX"), tag.getInt("MoundY"), tag.getInt("MoundZ")));
+        if (tag.read("MoundX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.setMoundPos(new BlockPos(tag.getIntOr("MoundX", 0), tag.getIntOr("MoundY", 0), tag.getIntOr("MoundZ", 0)));
         }
 
         if (this.hasWoodmeal()) {

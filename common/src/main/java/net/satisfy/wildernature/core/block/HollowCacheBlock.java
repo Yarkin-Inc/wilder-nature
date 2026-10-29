@@ -21,7 +21,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -33,8 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class HollowCacheBlock extends BaseEntityBlock {
-    public static final MapCodec<HollowCacheBlock> CODEC = simpleCodec(HollowCacheBlock::new);
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty OPEN = BooleanProperty.create("open");
     private static final VoxelShape SHAPE = Block.box(2.0D, 0.0D, 2.0D, 14.0D, 12.0D, 14.0D);
 
@@ -43,10 +42,7 @@ public class HollowCacheBlock extends BaseEntityBlock {
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(OPEN, false));
     }
 
-    @Override
-    protected @NotNull MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
+
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
@@ -104,18 +100,7 @@ public class HollowCacheBlock extends BaseEntityBlock {
         return InteractionResult.CONSUME;
     }
 
-    @Override
-    protected void onRemove(BlockState blockState, Level level, BlockPos blockPos, BlockState newBlockState, boolean movedByPiston) {
-        if (!blockState.is(newBlockState.getBlock())) {
-            BlockEntity blockEntity = level.getBlockEntity(blockPos);
-            if (blockEntity instanceof HollowCacheBlockEntity hollowCacheBlockEntity) {
-                Containers.dropContents(level, blockPos, hollowCacheBlockEntity);
-                level.updateNeighbourForOutputSignal(blockPos, this);
-            }
-        }
 
-        super.onRemove(blockState, level, blockPos, newBlockState, movedByPiston);
-    }
 
     @Override
     protected boolean hasAnalogOutputSignal(BlockState blockState) {
@@ -123,7 +108,7 @@ public class HollowCacheBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState blockState, Level level, BlockPos blockPos) {
+    protected int getAnalogOutputSignal(BlockState blockState, Level level, BlockPos blockPos, net.minecraft.core.Direction direction) {
         return AbstractContainerMenu.getRedstoneSignalFromBlockEntity(level.getBlockEntity(blockPos));
     }
 
@@ -133,9 +118,9 @@ public class HollowCacheBlock extends BaseEntityBlock {
 
     public static void spawnCacheOpenParticles(ServerLevel level, BlockPos blockPos) {
         for (int particleIndex = 0; particleIndex < 12; particleIndex++) {
-            double offsetX = (level.random.nextDouble() - 0.5D) * 0.7D;
-            double offsetY = level.random.nextDouble() * 0.25D;
-            double offsetZ = (level.random.nextDouble() - 0.5D) * 0.7D;
+            double offsetX = (level.getRandom().nextDouble() - 0.5D) * 0.7D;
+            double offsetY = level.getRandom().nextDouble() * 0.25D;
+            double offsetZ = (level.getRandom().nextDouble() - 0.5D) * 0.7D;
             level.sendParticles(ParticleTypeRegistry.CACHE_OPEN.get(), blockPos.getX() + 0.5D + offsetX, blockPos.getY() + 0.45D + offsetY, blockPos.getZ() + 0.5D + offsetZ, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         }
     }
@@ -144,12 +129,17 @@ public class HollowCacheBlock extends BaseEntityBlock {
         Direction front = blockState.getValue(FACING);
         Direction[] sides = {front.getOpposite(), front.getClockWise(), front.getCounterClockWise()};
         for (int particleIndex = 0; particleIndex < 10; particleIndex++) {
-            Direction side = sides[level.random.nextInt(sides.length)];
-            double along = (level.random.nextDouble() - 0.5D) * 0.7D;
+            Direction side = sides[level.getRandom().nextInt(sides.length)];
+            double along = (level.getRandom().nextDouble() - 0.5D) * 0.7D;
             double offsetX = side.getStepX() * 0.45D + side.getStepZ() * along;
-            double offsetY = level.random.nextDouble() * 0.1D;
+            double offsetY = level.getRandom().nextDouble() * 0.1D;
             double offsetZ = side.getStepZ() * 0.45D + side.getStepX() * along;
             level.sendParticles(ParticleTypeRegistry.CACHE_CLOSE.get(), blockPos.getX() + 0.5D + offsetX, blockPos.getY() + offsetY, blockPos.getZ() + 0.5D + offsetZ, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         }
+    }
+    @Override
+    protected void affectNeighborsAfterRemoval(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, boolean movedByPiston) {
+        level.updateNeighbourForOutputSignal(pos, this);
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
     }
 }

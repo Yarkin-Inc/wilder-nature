@@ -36,13 +36,13 @@ public class BurrowBlockEntity extends RandomizableContainerBlockEntity {
         this.stateManager = new ContainerOpenersCounter() {
             @Override
             protected void onOpen(Level level, BlockPos pos, BlockState state) {
-                level.playSound(null, pos, SoundEvents.GRASS_BREAK, SoundSource.BLOCKS, 0.7F, 0.85F + level.random.nextFloat() * 0.15F);
+                level.playSound(null, pos, SoundEvents.GRASS_BREAK, SoundSource.BLOCKS, 0.7F, 0.85F + level.getRandom().nextFloat() * 0.15F);
                 spawnDirtParticles(level, pos, state, 14, 0.12D);
             }
 
             @Override
             protected void onClose(Level level, BlockPos pos, BlockState state) {
-                level.playSound(null, pos, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.7F, 0.85F + level.random.nextFloat() * 0.15F);
+                level.playSound(null, pos, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.7F, 0.85F + level.getRandom().nextFloat() * 0.15F);
                 spawnDirtParticles(level, pos, state, 8, 0.05D);
             }
 
@@ -51,7 +51,7 @@ public class BurrowBlockEntity extends RandomizableContainerBlockEntity {
             }
 
             @Override
-            protected boolean isOwnContainer(Player player) {
+            public boolean isOwnContainer(Player player) {
                 if (player.containerMenu instanceof ChestMenu chestMenu) {
                     Container container = chestMenu.getContainer();
                     return container == BurrowBlockEntity.this;
@@ -101,19 +101,19 @@ public class BurrowBlockEntity extends RandomizableContainerBlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
-        super.saveAdditional(compoundTag, provider);
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput compoundTag) {
+        super.saveAdditional(compoundTag);
         if (!this.trySaveLootTable(compoundTag)) {
-            ContainerHelper.saveAllItems(compoundTag, this.inventory, provider);
+            ContainerHelper.saveAllItems(compoundTag, this.inventory);
         }
     }
 
     @Override
-    protected void loadAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
-        super.loadAdditional(compoundTag, provider);
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput compoundTag) {
+        super.loadAdditional(compoundTag);
         this.inventory = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         if (!this.tryLoadLootTable(compoundTag)) {
-            ContainerHelper.loadAllItems(compoundTag, this.inventory, provider);
+            ContainerHelper.loadAllItems(compoundTag, this.inventory);
         }
     }
 
@@ -143,14 +143,16 @@ public class BurrowBlockEntity extends RandomizableContainerBlockEntity {
     }
 
     @Override
-    public void startOpen(Player player) {
+    public void startOpen(net.minecraft.world.entity.ContainerUser user) {
+        net.minecraft.world.entity.LivingEntity player = user.getLivingEntity();
         if (!this.remove && !player.isSpectator()) {
-            this.stateManager.incrementOpeners(player, this.getLevel(), this.getBlockPos(), this.getBlockState());
+            this.stateManager.incrementOpeners(player, this.getLevel(), this.getBlockPos(), this.getBlockState(), user.getContainerInteractionRange());
         }
     }
 
     @Override
-    public void stopOpen(Player player) {
+    public void stopOpen(net.minecraft.world.entity.ContainerUser user) {
+        net.minecraft.world.entity.LivingEntity player = user.getLivingEntity();
         if (!this.remove && !player.isSpectator()) {
             this.stateManager.decrementOpeners(player, this.getLevel(), this.getBlockPos(), this.getBlockState());
         }

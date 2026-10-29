@@ -3,16 +3,16 @@ package net.satisfy.wildernature.core.fieldguide;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public record FieldGuideEntry(
-        ResourceLocation id,
-        ResourceLocation entityId,
-        ResourceLocation ambientSound,
+        Identifier id,
+        Identifier entityId,
+        Identifier ambientSound,
         boolean friendly,
         boolean neutral,
         boolean defensive,
@@ -20,11 +20,11 @@ public record FieldGuideEntry(
         boolean male,
         String title,
         String food,
-        List<ResourceLocation> biomes
+        List<Identifier> biomes
 ) {
-    public static FieldGuideEntry fromJson(ResourceLocation id, JsonObject jsonObject) {
-        ResourceLocation entityId = ResourceLocation.parse(GsonHelper.getAsString(jsonObject, "entity"));
-        ResourceLocation ambientSound = jsonObject.has("ambient_sound") ? ResourceLocation.parse(GsonHelper.getAsString(jsonObject, "ambient_sound")) : null;
+    public static FieldGuideEntry fromJson(Identifier id, JsonObject jsonObject) {
+        Identifier entityId = Identifier.parse(GsonHelper.getAsString(jsonObject, "entity"));
+        Identifier ambientSound = jsonObject.has("ambient_sound") ? Identifier.parse(GsonHelper.getAsString(jsonObject, "ambient_sound")) : null;
         boolean friendly = GsonHelper.getAsBoolean(jsonObject, "friendly", false);
         boolean neutral = GsonHelper.getAsBoolean(jsonObject, "neutral", false);
         boolean defensive = GsonHelper.getAsBoolean(jsonObject, "defensive", false);
@@ -34,17 +34,17 @@ public record FieldGuideEntry(
         String food = jsonObject.has("food") ? GsonHelper.getAsString(jsonObject, "food") : null;
 
         JsonObject spawnObject = GsonHelper.getAsJsonObject(jsonObject, "spawn", new JsonObject());
-        List<ResourceLocation> biomes = parseResourceLocationList(GsonHelper.getAsJsonArray(spawnObject, "biomes", new JsonArray()));
+        List<Identifier> biomes = parseResourceLocationList(GsonHelper.getAsJsonArray(spawnObject, "biomes", new JsonArray()));
 
         return new FieldGuideEntry(id, entityId, ambientSound, friendly, neutral, defensive, tameable, male, title, food, List.copyOf(biomes));
     }
 
     public void write(FriendlyByteBuf friendlyByteBuf) {
-        friendlyByteBuf.writeResourceLocation(this.id);
-        friendlyByteBuf.writeResourceLocation(this.entityId);
+        friendlyByteBuf.writeIdentifier(this.id);
+        friendlyByteBuf.writeIdentifier(this.entityId);
         friendlyByteBuf.writeBoolean(this.ambientSound != null);
         if (this.ambientSound != null) {
-            friendlyByteBuf.writeResourceLocation(this.ambientSound);
+            friendlyByteBuf.writeIdentifier(this.ambientSound);
         }
         friendlyByteBuf.writeBoolean(this.friendly);
         friendlyByteBuf.writeBoolean(this.neutral);
@@ -59,13 +59,14 @@ public record FieldGuideEntry(
         if (this.food != null) {
             friendlyByteBuf.writeUtf(this.food);
         }
-        friendlyByteBuf.writeCollection(this.biomes, FriendlyByteBuf::writeResourceLocation);
+        friendlyByteBuf.writeVarInt(this.biomes.size());
+        this.biomes.forEach(friendlyByteBuf::writeIdentifier);
     }
 
     public static FieldGuideEntry read(FriendlyByteBuf friendlyByteBuf) {
-        ResourceLocation id = friendlyByteBuf.readResourceLocation();
-        ResourceLocation entityId = friendlyByteBuf.readResourceLocation();
-        ResourceLocation ambientSound = friendlyByteBuf.readBoolean() ? friendlyByteBuf.readResourceLocation() : null;
+        Identifier id = friendlyByteBuf.readIdentifier();
+        Identifier entityId = friendlyByteBuf.readIdentifier();
+        Identifier ambientSound = friendlyByteBuf.readBoolean() ? friendlyByteBuf.readIdentifier() : null;
         boolean friendly = friendlyByteBuf.readBoolean();
         boolean neutral = friendlyByteBuf.readBoolean();
         boolean defensive = friendlyByteBuf.readBoolean();
@@ -73,7 +74,10 @@ public record FieldGuideEntry(
         boolean male = friendlyByteBuf.readBoolean();
         String title = friendlyByteBuf.readBoolean() ? friendlyByteBuf.readUtf() : null;
         String food = friendlyByteBuf.readBoolean() ? friendlyByteBuf.readUtf() : null;
-        List<ResourceLocation> biomes = friendlyByteBuf.readList(FriendlyByteBuf::readResourceLocation);
+        int biomeCount = friendlyByteBuf.readVarInt();
+        if (biomeCount < 0 || biomeCount > 4096) throw new IllegalArgumentException("Invalid biome count");
+        List<Identifier> biomes = new ArrayList<>(biomeCount);
+        for (int i = 0; i < biomeCount; i++) biomes.add(friendlyByteBuf.readIdentifier());
 
         return new FieldGuideEntry(id, entityId, ambientSound, friendly, neutral, defensive, tameable, male, title, food, List.copyOf(biomes));
     }
@@ -86,11 +90,11 @@ public record FieldGuideEntry(
         return this.hasFood() && this.food.startsWith("#");
     }
 
-    private static List<ResourceLocation> parseResourceLocationList(JsonArray jsonArray) {
-        List<ResourceLocation> resourceLocations = new ArrayList<>();
+    private static List<Identifier> parseResourceLocationList(JsonArray jsonArray) {
+        List<Identifier> resourceLocations = new ArrayList<>();
 
         for (int index = 0; index < jsonArray.size(); index++) {
-            resourceLocations.add(ResourceLocation.parse(jsonArray.get(index).getAsString()));
+            resourceLocations.add(Identifier.parse(jsonArray.get(index).getAsString()));
         }
 
         return resourceLocations;

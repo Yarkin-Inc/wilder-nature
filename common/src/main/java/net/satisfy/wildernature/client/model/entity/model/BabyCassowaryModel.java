@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.CassowaryRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -12,7 +12,7 @@ import net.satisfy.wildernature.client.model.entity.animation.BabyCassowaryAnima
 import net.satisfy.wildernature.core.entity.animal.defensive.CassowaryEntity;
 import org.jetbrains.annotations.NotNull;
 
-public class BabyCassowaryModel<T extends CassowaryEntity> extends HierarchicalModel<T> {
+public class BabyCassowaryModel<T extends CassowaryRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("baby_cassowary"), "main");
 
     private final ModelPart cassowary;
@@ -20,6 +20,7 @@ public class BabyCassowaryModel<T extends CassowaryEntity> extends HierarchicalM
     private final ModelPart head;
 
     public BabyCassowaryModel(ModelPart root) {
+        super(root);
         this.cassowary = root.getChild("cassowary");
         this.neck = this.cassowary.getChild("neck");
         this.head = this.neck.getChild("h_head");
@@ -50,7 +51,12 @@ public class BabyCassowaryModel<T extends CassowaryEntity> extends HierarchicalM
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.cassowary.getAllParts().forEach(ModelPart::resetPose);
 
         boolean isMoving = limbSwingAmount > 0F;
@@ -73,13 +79,7 @@ public class BabyCassowaryModel<T extends CassowaryEntity> extends HierarchicalM
         }
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.cassowary.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.cassowary;
-    }
+
+
 }

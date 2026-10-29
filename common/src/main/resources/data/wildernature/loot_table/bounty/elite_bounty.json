@@ -9,14 +9,14 @@
           "type": "minecraft:item",
           "weight": 14,
           "name": "minecraft:emerald",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 4,
                 "max": 8
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -24,14 +24,14 @@
           "type": "minecraft:item",
           "weight": 12,
           "name": "minecraft:gold_ingot",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 4,
                 "max": 8
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -39,14 +39,14 @@
           "type": "minecraft:item",
           "weight": 10,
           "name": "minecraft:diamond",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 1,
                 "max": 3
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -54,14 +54,14 @@
           "type": "minecraft:item",
           "weight": 8,
           "name": "minecraft:experience_bottle",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 6,
                 "max": 14
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -69,14 +69,14 @@
           "type": "minecraft:item",
           "weight": 7,
           "name": "minecraft:ender_pearl",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 5
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -99,14 +99,15 @@
           "type": "minecraft:item",
           "weight": 5,
           "name": "minecraft:diamond_sword",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:enchant_with_levels",
               "treasure": true,
               "levels": {
                 "min": 28,
-                "max": 39
-              }
+                "max": 39,
+                "type": "minecraft:uniform"
+              },
+              "type": "minecraft:enchant_with_levels"
             }
           ]
         },
@@ -114,14 +115,15 @@
           "type": "minecraft:item",
           "weight": 4,
           "name": "minecraft:diamond_chestplate",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:enchant_with_levels",
               "treasure": true,
               "levels": {
                 "min": 28,
-                "max": 39
-              }
+                "max": 39,
+                "type": "minecraft:uniform"
+              },
+              "type": "minecraft:enchant_with_levels"
             }
           ]
         },
@@ -129,14 +131,15 @@
           "type": "minecraft:item",
           "weight": 4,
           "name": "minecraft:diamond_helmet",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:enchant_with_levels",
               "treasure": true,
               "levels": {
                 "min": 28,
-                "max": 39
-              }
+                "max": 39,
+                "type": "minecraft:uniform"
+              },
+              "type": "minecraft:enchant_with_levels"
             }
           ]
         },
@@ -144,14 +147,15 @@
           "type": "minecraft:item",
           "weight": 4,
           "name": "minecraft:diamond_leggings",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:enchant_with_levels",
               "treasure": true,
               "levels": {
                 "min": 28,
-                "max": 39
-              }
+                "max": 39,
+                "type": "minecraft:uniform"
+              },
+              "type": "minecraft:enchant_with_levels"
             }
           ]
         },
@@ -159,14 +163,15 @@
           "type": "minecraft:item",
           "weight": 4,
           "name": "minecraft:diamond_boots",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:enchant_with_levels",
               "treasure": true,
               "levels": {
                 "min": 28,
-                "max": 39
-              }
+                "max": 39,
+                "type": "minecraft:uniform"
+              },
+              "type": "minecraft:enchant_with_levels"
             }
           ]
         },
@@ -174,14 +179,15 @@
           "type": "minecraft:item",
           "weight": 3,
           "name": "minecraft:bow",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:enchant_with_levels",
               "treasure": true,
               "levels": {
                 "min": 28,
-                "max": 39
-              }
+                "max": 39,
+                "type": "minecraft:uniform"
+              },
+              "type": "minecraft:enchant_with_levels"
             }
           ]
         },
@@ -189,9 +195,8 @@
           "type": "minecraft:item",
           "weight": 3,
           "name": "minecraft:enchanted_book",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:enchant_randomly",
               "options": [
                 "minecraft:mending",
                 "minecraft:unbreaking",
@@ -199,7 +204,8 @@
                 "minecraft:sharpness",
                 "minecraft:power",
                 "minecraft:efficiency"
-              ]
+              ],
+              "type": "minecraft:enchant_randomly"
             }
           ]
         }

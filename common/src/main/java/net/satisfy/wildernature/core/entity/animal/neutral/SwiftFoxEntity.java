@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.neutral;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -86,7 +88,7 @@ public class SwiftFoxEntity extends Animal {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MOVEMENT_SPEED, 0.32D)
                 .add(Attributes.MAX_HEALTH, 14.0D)
                 .add(Attributes.ATTACK_DAMAGE, 4.0D)
@@ -158,11 +160,11 @@ public class SwiftFoxEntity extends Animal {
         if (!this.level().isClientSide()) {
             ItemStack carriedItem = this.getMainHandItem();
             if (!carriedItem.isEmpty()) {
-                this.spawnAtLocation(carriedItem.copy());
+                this.spawnAtLocation((net.minecraft.server.level.ServerLevel) level(), carriedItem.copy());
             }
 
             if (!this.hiddenItem.isEmpty()) {
-                this.spawnAtLocation(this.hiddenItem.copy());
+                this.spawnAtLocation((net.minecraft.server.level.ServerLevel) level(), this.hiddenItem.copy());
                 this.hiddenItem = ItemStack.EMPTY;
                 this.hidePos = null;
             }
@@ -333,7 +335,7 @@ public class SwiftFoxEntity extends Animal {
 
         for (int searchIndex = 0; searchIndex < 20; searchIndex++) {
             BlockPos targetPos = originPos.offset(this.random.nextInt(radius * 2 + 1) - radius, 0, this.random.nextInt(radius * 2 + 1) - radius);
-            if (this.level().isEmptyBlock(targetPos) && this.level().getBlockState(targetPos.below()).isSolidRender(this.level(), targetPos.below())) {
+            if (this.level().isEmptyBlock(targetPos) && this.level().getBlockState(targetPos.below()).isSolidRender()) {
                 return targetPos;
             }
         }
@@ -361,26 +363,26 @@ public class SwiftFoxEntity extends Animal {
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float amount) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float amount) {
         this.resetSleep();
         this.stopSneaking();
         this.triggerAttackAnimation();
         if (damageSource.getEntity() instanceof Player) {
             this.reduceTrust(10);
         }
-        return super.hurt(damageSource, amount);
+        return super.hurtServer(serverLevel, damageSource, amount);
     }
 
     @Override
     protected void updateWalkAnimation(float movementSpeed) {
         float speed = this.getPose() == Pose.STANDING && !this.isSleeping() ? Math.min(movementSpeed * 6.0F, 1.0F) : 0.0F;
-        this.walkAnimation.update(speed, 0.2F);
+        this.walkAnimation.update(speed, 0.2F, 1.0F);
     }
 
     @Nullable
     @Override
     public SwiftFoxEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.SWIFT_FOX.get().create(serverLevel);
+        return EntityTypeRegistry.SWIFT_FOX.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -426,7 +428,7 @@ public class SwiftFoxEntity extends Animal {
                     this.heal(2.0F);
                 }
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide());
+            return InteractionResult.SUCCESS;
         }
 
         if (this.isFood(itemStack)) {
@@ -444,14 +446,14 @@ public class SwiftFoxEntity extends Animal {
                     }
                 }
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide());
+            return InteractionResult.SUCCESS;
         }
 
         return super.mobInteract(player, hand);
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
+    public void addAdditionalSaveData(ValueOutput compound) {
         super.addAdditionalSaveData(compound);
         compound.putBoolean("TryingToStealFromPlayer", this.tryingToStealFromPlayer);
         compound.putInt("SneakTicks", this.sneakTicks);
@@ -463,7 +465,7 @@ public class SwiftFoxEntity extends Animal {
         compound.putInt("TrustLevel", this.trustLevel);
 
         if (!this.hiddenItem.isEmpty()) {
-            compound.put("HiddenItem", this.hiddenItem.save(this.registryAccess()));
+            compound.store("HiddenItem", ItemStack.OPTIONAL_CODEC, this.hiddenItem);
         }
         if (this.hidePos != null) {
             compound.putInt("HidePosX", this.hidePos.getX());
@@ -471,38 +473,38 @@ public class SwiftFoxEntity extends Animal {
             compound.putInt("HidePosZ", this.hidePos.getZ());
         }
         if (this.stolenFromPlayerUuid != null) {
-            compound.putUUID("StolenFromPlayerUuid", this.stolenFromPlayerUuid);
+            compound.store("StolenFromPlayerUuid", net.minecraft.core.UUIDUtil.CODEC, this.stolenFromPlayerUuid);
         }
         if (this.trustedPlayerUuid != null) {
-            compound.putUUID("TrustedPlayerUuid", this.trustedPlayerUuid);
+            compound.store("TrustedPlayerUuid", net.minecraft.core.UUIDUtil.CODEC, this.trustedPlayerUuid);
         }
         if (this.returnTargetPlayerUuid != null) {
-            compound.putUUID("ReturnTargetPlayerUuid", this.returnTargetPlayerUuid);
+            compound.store("ReturnTargetPlayerUuid", net.minecraft.core.UUIDUtil.CODEC, this.returnTargetPlayerUuid);
         }
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
+    public void readAdditionalSaveData(ValueInput compound) {
         super.readAdditionalSaveData(compound);
-        this.tryingToStealFromPlayer = compound.getBoolean("TryingToStealFromPlayer");
-        this.sneakTicks = compound.getInt("SneakTicks");
-        this.sleepTicks = compound.getInt("SleepTicks");
-        this.attackAnimationTicks = compound.getInt("AttackAnimationTicks");
-        this.stealCooldownTicks = compound.getInt("StealCooldownTicks");
-        this.returnCooldownTicks = compound.getInt("ReturnCooldownTicks");
-        this.giftCooldownTicks = compound.getInt("GiftCooldownTicks");
-        this.trustLevel = compound.getInt("TrustLevel");
-        this.hiddenItem = compound.contains("HiddenItem") ? ItemStack.parseOptional(this.registryAccess(), compound.getCompound("HiddenItem")) : ItemStack.EMPTY;
+        this.tryingToStealFromPlayer = compound.getBooleanOr("TryingToStealFromPlayer", false);
+        this.sneakTicks = compound.getIntOr("SneakTicks", 0);
+        this.sleepTicks = compound.getIntOr("SleepTicks", 0);
+        this.attackAnimationTicks = compound.getIntOr("AttackAnimationTicks", 0);
+        this.stealCooldownTicks = compound.getIntOr("StealCooldownTicks", 0);
+        this.returnCooldownTicks = compound.getIntOr("ReturnCooldownTicks", 0);
+        this.giftCooldownTicks = compound.getIntOr("GiftCooldownTicks", 0);
+        this.trustLevel = compound.getIntOr("TrustLevel", 0);
+        this.hiddenItem = compound.read("HiddenItem", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() ? compound.read("HiddenItem", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
 
-        if (compound.contains("HidePosX") && compound.contains("HidePosY") && compound.contains("HidePosZ")) {
-            this.hidePos = new BlockPos(compound.getInt("HidePosX"), compound.getInt("HidePosY"), compound.getInt("HidePosZ"));
+        if (compound.read("HidePosX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compound.read("HidePosY", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compound.read("HidePosZ", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.hidePos = new BlockPos(compound.getIntOr("HidePosX", 0), compound.getIntOr("HidePosY", 0), compound.getIntOr("HidePosZ", 0));
         } else {
             this.hidePos = null;
         }
 
-        this.stolenFromPlayerUuid = compound.hasUUID("StolenFromPlayerUuid") ? compound.getUUID("StolenFromPlayerUuid") : null;
-        this.trustedPlayerUuid = compound.hasUUID("TrustedPlayerUuid") ? compound.getUUID("TrustedPlayerUuid") : null;
-        this.returnTargetPlayerUuid = compound.hasUUID("ReturnTargetPlayerUuid") ? compound.getUUID("ReturnTargetPlayerUuid") : null;
+        this.stolenFromPlayerUuid = compound.read("StolenFromPlayerUuid", net.minecraft.core.UUIDUtil.CODEC).isPresent() ? compound.read("StolenFromPlayerUuid", net.minecraft.core.UUIDUtil.CODEC).orElse(null) : null;
+        this.trustedPlayerUuid = compound.read("TrustedPlayerUuid", net.minecraft.core.UUIDUtil.CODEC).isPresent() ? compound.read("TrustedPlayerUuid", net.minecraft.core.UUIDUtil.CODEC).orElse(null) : null;
+        this.returnTargetPlayerUuid = compound.read("ReturnTargetPlayerUuid", net.minecraft.core.UUIDUtil.CODEC).isPresent() ? compound.read("ReturnTargetPlayerUuid", net.minecraft.core.UUIDUtil.CODEC).orElse(null) : null;
 
         this.setSneaking(this.sneakTicks > 0);
         this.setSleeping(this.sleepTicks > SLEEP_START_TICKS);

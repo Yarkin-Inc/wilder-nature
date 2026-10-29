@@ -1,7 +1,7 @@
 package net.satisfy.wildernature.core.entity.ai.goal.animal;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -116,7 +116,7 @@ public final class DeerGoals {
 
         @Override
         public boolean canUse() {
-            if (this.deer.isDeerRunning() || this.deer.isSleeping() || this.deer.level().isDay()) {
+            if (this.deer.isDeerRunning() || this.deer.isSleeping() || this.deer.level().isBrightOutside()) {
                 return false;
             }
             if (failureCooldown > 0) {
@@ -136,7 +136,7 @@ public final class DeerGoals {
             return this.targetPosition != null
                     && !this.deer.isDeerRunning()
                     && !this.deer.isSleeping()
-                    && !this.deer.level().isDay()
+                    && !this.deer.level().isBrightOutside()
                     && !this.deer.level().getBlockState(this.deer.blockPosition().below()).is(Blocks.GRASS_BLOCK);
         }
 
@@ -202,7 +202,7 @@ public final class DeerGoals {
     public static class DeerEatingGoal extends Goal {
         private static final int EATING_DURATION_TICKS = 37;
         private static final int COOLDOWN_TICKS = 400;
-        private static final AttributeModifier MOVEMENT_MODIFIER = new AttributeModifier(ResourceLocation.parse("deer_eat_do_not_move"), -1000, AttributeModifier.Operation.ADD_VALUE);
+        private static final AttributeModifier MOVEMENT_MODIFIER = new AttributeModifier(Identifier.parse("deer_eat_do_not_move"), -1000, AttributeModifier.Operation.ADD_VALUE);
 
         private final DeerEntity deer;
         private int counter;
@@ -225,7 +225,7 @@ public final class DeerGoals {
         @Override
         public void tick() {
             this.counter++;
-            if (!this.deer.level().isClientSide && this.counter % 8 == 0) {
+            if (!this.deer.level().isClientSide() && this.counter % 8 == 0) {
                 BlockPos blockPos = this.deer.blockPosition().below();
                 BlockState blockState = this.deer.level().getBlockState(blockPos);
                 if (!blockState.isAir()) {
@@ -256,7 +256,7 @@ public final class DeerGoals {
     public static class DeerLookAroundGoal extends Goal {
         private static final int DURATION = 70;
         private static final int COOLDOWN = 400;
-        private static final AttributeModifier MOVEMENT_MODIFIER = new AttributeModifier(ResourceLocation.parse("deer_look_do_not_move"), -1000, AttributeModifier.Operation.ADD_VALUE);
+        private static final AttributeModifier MOVEMENT_MODIFIER = new AttributeModifier(Identifier.parse("deer_look_do_not_move"), -1000, AttributeModifier.Operation.ADD_VALUE);
 
         private final DeerEntity deer;
         private int counter;

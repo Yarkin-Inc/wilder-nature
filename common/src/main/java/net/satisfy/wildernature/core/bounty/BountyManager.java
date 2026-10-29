@@ -6,7 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -42,7 +42,7 @@ public final class BountyManager {
         }
 
         return switch (bountyDefinition.type()) {
-            case GATHER -> new ItemStack(BuiltInRegistries.ITEM.get(bountyDefinition.targetId()));
+            case GATHER -> new ItemStack(BuiltInRegistries.ITEM.getValue(bountyDefinition.targetId()));
             case EXPLORE -> new ItemStack(Items.COMPASS);
             case OBSERVE -> new ItemStack(Items.SPYGLASS);
             case HUNT -> new ItemStack(getContractItem(bountyDefinition));
@@ -76,14 +76,14 @@ public final class BountyManager {
     }
 
     public static PlayerBountyData getPlayerBountyData(ServerPlayer serverPlayer) {
-        BountyBoardSavedData savedData = BountyBoardSavedData.get(serverPlayer.serverLevel());
-        savedData.ensureCurrentBounties(serverPlayer.serverLevel());
+        BountyBoardSavedData savedData = BountyBoardSavedData.get(serverPlayer.level());
+        savedData.ensureCurrentBounties(serverPlayer.level());
         return savedData.getPlayerBountyData(serverPlayer.getUUID());
     }
 
     public static void savePlayerBountyData(ServerPlayer serverPlayer, PlayerBountyData playerBountyData) {
-        BountyBoardSavedData savedData = BountyBoardSavedData.get(serverPlayer.serverLevel());
-        savedData.ensureCurrentBounties(serverPlayer.serverLevel());
+        BountyBoardSavedData savedData = BountyBoardSavedData.get(serverPlayer.level());
+        savedData.ensureCurrentBounties(serverPlayer.level());
         savedData.setPlayerBountyData(serverPlayer.getUUID(), playerBountyData);
     }
 
@@ -99,7 +99,7 @@ public final class BountyManager {
             return false;
         }
 
-        BountyBoardSavedData savedData = BountyBoardSavedData.get(serverPlayer.serverLevel());
+        BountyBoardSavedData savedData = BountyBoardSavedData.get(serverPlayer.level());
         Optional<BountyDefinition> optionalBountyDefinition = savedData.getBounty(bountyId);
         if (optionalBountyDefinition.isEmpty()) {
             return false;
@@ -113,7 +113,7 @@ public final class BountyManager {
     public static ItemStack createContractStack(BountyDefinition bountyDefinition) {
         ItemStack contractStack = new ItemStack(getContractItem(bountyDefinition));
         CompoundTag customDataTag = new CompoundTag();
-        customDataTag.putUUID("BountyId", bountyDefinition.id());
+        customDataTag.store("BountyId", net.minecraft.core.UUIDUtil.CODEC, bountyDefinition.id());
         customDataTag.putString("BountyType", bountyDefinition.type().getSerializedName());
         customDataTag.putString("TargetType", bountyDefinition.targetType().getSerializedName());
         customDataTag.putString("TargetId", bountyDefinition.targetId().toString());
@@ -155,7 +155,7 @@ public final class BountyManager {
             }
 
             CompoundTag customDataTag = customData.copyTag();
-            if (customDataTag.hasUUID("BountyId") && customDataTag.getUUID("BountyId").equals(bountyId)) {
+            if (customDataTag.read("BountyId", net.minecraft.core.UUIDUtil.CODEC).isPresent() && customDataTag.read("BountyId", net.minecraft.core.UUIDUtil.CODEC).orElseThrow().equals(bountyId)) {
                 serverPlayer.getInventory().setItem(slotIndex, ItemStack.EMPTY);
                 return;
             }
@@ -183,15 +183,15 @@ public final class BountyManager {
         }
 
         BountyDefinition activeBounty = playerBountyData.getActiveBounty();
-        ResourceLocation lootTableId = activeBounty.reward().lootTableId();
+        Identifier lootTableId = activeBounty.reward().lootTableId();
 
-        LootTable lootTable = serverPlayer.serverLevel()
+        LootTable lootTable = serverPlayer.level()
                 .getServer()
                 .reloadableRegistries()
                 .getLootTable(ResourceKey.create(Registries.LOOT_TABLE, lootTableId));
 
         if (lootTable != LootTable.EMPTY) {
-            LootParams lootParams = new LootParams.Builder(serverPlayer.serverLevel())
+            LootParams lootParams = new LootParams.Builder(serverPlayer.level())
                     .withParameter(LootContextParams.ORIGIN, serverPlayer.position())
                     .withParameter(LootContextParams.THIS_ENTITY, serverPlayer)
                     .create(LootContextParamSets.GIFT);
@@ -204,7 +204,7 @@ public final class BountyManager {
                 }
 
                 if (!serverPlayer.addItem(rewardStack.copy())) {
-                    serverPlayer.drop(rewardStack.copy(), false);
+                    serverPlayer.drop(rewardStack.copy(), false, net.minecraft.util.Prediction.SERVER_ONLY);
                 }
             }
         }
@@ -247,7 +247,7 @@ public final class BountyManager {
                 continue;
             }
 
-            if (killedEntity.getType().builtInRegistryHolder().key().location().equals(activeBounty.targetId())) {
+            if (killedEntity.getType().builtInRegistryHolder().key().identifier().equals(activeBounty.targetId())) {
                 playerBountyData.incrementProgress(1);
                 updateContractProgress(serverPlayer, activeBounty.id(), playerBountyData.getCurrentProgress());
                 savePlayerBountyData(serverPlayer, playerBountyData);
@@ -281,7 +281,7 @@ public final class BountyManager {
                 continue;
             }
 
-            ResourceLocation inventoryItemId = BuiltInRegistries.ITEM.getKey(inventoryStack.getItem());
+            Identifier inventoryItemId = BuiltInRegistries.ITEM.getKey(inventoryStack.getItem());
             if (inventoryItemId.equals(activeBounty.targetId())) {
                 matchingItemCount += inventoryStack.getCount();
             }
@@ -315,7 +315,7 @@ public final class BountyManager {
         }
 
         Entity observedEntity = entityHitResult.getEntity();
-        ResourceLocation observedEntityId = observedEntity.getType().builtInRegistryHolder().key().location();
+        Identifier observedEntityId = observedEntity.getType().builtInRegistryHolder().key().identifier();
         if (!observedEntityId.equals(activeBounty.targetId())) {
             return;
         }
@@ -324,14 +324,14 @@ public final class BountyManager {
     }
 
     private static void handleExploreTick(ServerPlayer serverPlayer, PlayerBountyData playerBountyData, BountyDefinition activeBounty) {
-        Holder<Biome> biomeHolder = serverPlayer.serverLevel().getBiome(serverPlayer.blockPosition());
+        Holder<Biome> biomeHolder = serverPlayer.level().getBiome(serverPlayer.blockPosition());
         Optional<ResourceKey<Biome>> biomeKey = biomeHolder.unwrapKey();
 
         if (biomeKey.isEmpty()) {
             return;
         }
 
-        if (!biomeKey.get().location().equals(activeBounty.targetId())) {
+        if (!biomeKey.get().identifier().equals(activeBounty.targetId())) {
             return;
         }
 
@@ -364,7 +364,7 @@ public final class BountyManager {
             }
 
             CompoundTag customDataTag = customData.copyTag();
-            if (!customDataTag.hasUUID("BountyId") || !customDataTag.getUUID("BountyId").equals(bountyId)) {
+            if (!customDataTag.read("BountyId", net.minecraft.core.UUIDUtil.CODEC).isPresent() || !customDataTag.read("BountyId", net.minecraft.core.UUIDUtil.CODEC).orElseThrow().equals(bountyId)) {
                 continue;
             }
 
@@ -387,7 +387,7 @@ public final class BountyManager {
         }
 
         if (!serverPlayer.addItem(contractStack)) {
-            serverPlayer.drop(contractStack, false);
+            serverPlayer.drop(contractStack, false, net.minecraft.util.Prediction.SERVER_ONLY);
         }
     }
 }

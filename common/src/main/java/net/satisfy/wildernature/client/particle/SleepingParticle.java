@@ -7,7 +7,7 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
-public class SleepingParticle extends TextureSheetParticle {
+public class SleepingParticle extends SingleQuadParticle {
     private static final int FADE_DURATION = 30;
     private static final float MAXIMUM_ROTATION_OFFSET = 0.22F;
 
@@ -20,8 +20,8 @@ public class SleepingParticle extends TextureSheetParticle {
     private float previousQuadSize;
     private float currentGrowthSpeed;
 
-    protected SleepingParticle(ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
-        super(level, x, y, z, velocityX, velocityY, velocityZ);
+    protected SleepingParticle(ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.client.renderer.texture.TextureAtlasSprite initialSprite) {
+        super(level, x, y, z, velocityX, velocityY, velocityZ, initialSprite);
         this.friction = 0.985F;
         this.gravity = 0.0F;
         this.hasPhysics = true;
@@ -92,8 +92,8 @@ public class SleepingParticle extends TextureSheetParticle {
     }
 
     @Override
-    public @NotNull ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
+    public @NotNull SingleQuadParticle.Layer getLayer() {
+        return SingleQuadParticle.Layer.TRANSLUCENT;
     }
 
     public static class Provider implements ParticleProvider<SimpleParticleType> {
@@ -104,12 +104,12 @@ public class SleepingParticle extends TextureSheetParticle {
         }
 
         @Override
-        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double velocityX, double velocityY, double velocityZ, net.minecraft.util.RandomSource random) {
             if (!PlatformHelper.isEmoteParticlesEnabled()) {
                 return null;
             }
-            SleepingParticle particle = new SleepingParticle(level, x, y, z, velocityX, velocityY, velocityZ);
-            particle.pickSprite(this.spriteSet);
+            SleepingParticle particle = new SleepingParticle(level, x, y, z, velocityX, velocityY, velocityZ, this.spriteSet.get(random));
+            particle.setSprite(this.spriteSet.get(random));
             return particle;
         }
     }

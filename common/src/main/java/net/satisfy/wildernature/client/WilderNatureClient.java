@@ -6,16 +6,15 @@ import dev.architectury.registry.client.level.entity.EntityRendererRegistry;
 import dev.architectury.registry.client.particle.ParticleProviderRegistry;
 import dev.architectury.registry.client.rendering.BlockEntityRendererRegistry;
 import dev.architectury.registry.client.rendering.ColorHandlerRegistry;
-import dev.architectury.registry.client.rendering.RenderTypeRegistry;
+
 import dev.architectury.registry.menu.MenuRegistry;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.renderer.BiomeColors;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.GrassColor;
-import net.satisfy.wildernature.client.compat.AccessoriesClientCompat;
 import net.satisfy.wildernature.client.gui.screen.BountyBoardScreen;
 import net.satisfy.wildernature.client.gui.screen.FieldGuideScreen;
 import net.satisfy.wildernature.client.model.armor.FurCloakModel;
@@ -37,7 +36,7 @@ import net.satisfy.wildernature.core.registry.ParticleTypeRegistry;
 import net.satisfy.wildernature.core.registry.TabRegistry;
 import net.satisfy.foundation.client.creative.CreativeSideTabs;
 
-import static net.satisfy.wildernature.client.util.WilderNatureClientUtil.makeHorn;
+
 import static net.satisfy.wildernature.core.registry.EntityTypeRegistry.TURKEY_EGG;
 import static net.satisfy.wildernature.core.registry.EntityTypeRegistry.*;
 import static net.satisfy.wildernature.core.registry.ObjectRegistry.*;
@@ -50,24 +49,21 @@ public class WilderNatureClient {
         CreativeSideTabs.register(TabRegistry.WILDERNATURE_TAB.getKey(),
                 CreativeSideTabs.SideTab.of(Component.translatable("creativetab.wildernature.side.wilds"), BOUNTY_BOARD.get(), TabRegistry::acceptWilds),
                 CreativeSideTabs.SideTab.of(Component.translatable("creativetab.wildernature.side.spawn_eggs"), DEER_SPAWN_EGG.get(), TabRegistry::acceptSpawnEggs));
-        if (Platform.isModLoaded("accessories")) {
-            AccessoriesClientCompat.init();
-        }
 
-        RenderTypeRegistry.register(RenderType.cutout(), DEER_TROPHY.get(), HAZELNUT_BUSH.get(), BOUNTY_BOARD.get(), BURROW.get(), RED_MUSHROOM_COLONY.get(), BROWN_MUSHROOM_COLONY.get(), BEAVER_DAM.get());
 
         BlockEntityRendererRegistry.register(COMPLETIONIST_BANNER_BLOCK_ENTITY.get(), CompletionistBannerRenderer::new);
         BlockEntityRendererRegistry.register(BOUNTY_BOARD_BLOCK_ENTITY.get(), BountyBoardRenderer::new);
         BlockEntityRendererRegistry.register(HOLLOW_CACHE_BLOCK_ENTITY.get(), HollowCacheRenderer::new);
 
-        ColorHandlerRegistry.registerBlockColors((blockState, blockAndTintGetter, blockPos, tintIndex) -> {
-            if (blockAndTintGetter != null && blockPos != null) {
-                return BiomeColors.getAverageGrassColor(blockAndTintGetter, blockPos);
+        ColorHandlerRegistry.registerBlockColors(new net.minecraft.client.color.block.BlockTintSource() {
+            @Override public int color(net.minecraft.world.level.block.state.BlockState state) {
+                return GrassColor.getDefaultColor();
             }
-            return GrassColor.getDefaultColor();
+            @Override public int colorInWorld(net.minecraft.world.level.block.state.BlockState state,
+                    net.minecraft.client.renderer.block.BlockAndTintGetter level, net.minecraft.core.BlockPos pos) {
+                return BiomeColors.getAverageGrassColor(level, pos);
+            }
         }, BURROW.get());
-
-        ColorHandlerRegistry.registerItemColors((itemStack, tintIndex) -> GrassColor.getDefaultColor(), BURROW.get());
 
         ParticleProviderRegistry.register(ParticleTypeRegistry.SLEEPING.get(), SleepingParticle.Provider::new);
         ParticleProviderRegistry.register(ParticleTypeRegistry.ALERT.get(), AlertParticle.Provider::new);
@@ -81,16 +77,16 @@ public class WilderNatureClient {
         ParticleProviderRegistry.register(ParticleTypeRegistry.SHEARED_WOOL.get(), WoolFluffParticle.Provider::new);
         ParticleProviderRegistry.register(ParticleTypeRegistry.BURST_OF_EXPERIENCE.get(), BurstOfExperienceParticle.Provider::new);
 
-        MenuRegistry.registerScreenFactory(MenuTypeRegistry.BOUNTY_BOARD_MENU.get(), BountyBoardScreen::new);
-        MenuRegistry.registerScreenFactory(MenuTypeRegistry.FIELD_GUIDE_MENU.get(), FieldGuideScreen::new);
+        net.minecraft.client.gui.screens.MenuScreens.register(MenuTypeRegistry.BOUNTY_BOARD_MENU.get(), BountyBoardScreen::new);
+        net.minecraft.client.gui.screens.MenuScreens.register(MenuTypeRegistry.FIELD_GUIDE_MENU.get(), FieldGuideScreen::new);
 
-        makeHorn(ObjectRegistry.BISON_HORN.get());
+
     }
 
     public static void preInitClient() {
         registerEntityRenderers();
         registerEntityModelLayer();
-        WilderNatureClientUtil.init();
+
     }
 
     public static void registerEntityRenderers() {

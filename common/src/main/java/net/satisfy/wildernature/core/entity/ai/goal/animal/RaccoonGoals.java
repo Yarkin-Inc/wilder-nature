@@ -7,7 +7,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
@@ -19,11 +19,11 @@ import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.PanicGoal;
-import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -290,7 +290,7 @@ public class RaccoonGoals {
 
         @Override
         public boolean canUse() {
-            if (this.raccoon.level().isDay() || this.raccoon.isPanicking() || this.raccoon.isSheltering() || this.raccoon.isOpeningDoor() || this.raccoon.isContainerLooting() || this.raccoon.isStoringLoot() || this.raccoon.isSleeping()) {
+            if (this.raccoon.level().isBrightOutside() || this.raccoon.isPanicking() || this.raccoon.isSheltering() || this.raccoon.isOpeningDoor() || this.raccoon.isContainerLooting() || this.raccoon.isStoringLoot() || this.raccoon.isSleeping()) {
                 return false;
             }
 
@@ -319,7 +319,7 @@ public class RaccoonGoals {
 
         @Override
         public boolean canContinueToUse() {
-            return !this.raccoon.level().isDay()
+            return !this.raccoon.level().isBrightOutside()
                     && !this.raccoon.isPanicking()
                     && !this.raccoon.isSleeping()
                     && !this.raccoon.isOpeningDoor()
@@ -717,8 +717,8 @@ public class RaccoonGoals {
         private static final int SEARCH_COOLDOWN_MIN = 60;
         private static final int SEARCH_COOLDOWN_MAX = 140;
         private static final int STEAL_DURATION = 18;
-        private static final ResourceLocation CHICKEN_COOP_ID = ResourceLocation.parse("farm_and_charm:chicken_coop");
-        private static final ResourceLocation CHICKEN_NEST_ID = ResourceLocation.parse("farm_and_charm:chicken_nest");
+        private static final Identifier CHICKEN_COOP_ID = Identifier.parse("farm_and_charm:chicken_coop");
+        private static final Identifier CHICKEN_NEST_ID = Identifier.parse("farm_and_charm:chicken_nest");
 
         private final RaccoonEntity raccoon;
         private final double speedModifier;
@@ -741,10 +741,10 @@ public class RaccoonGoals {
             if (!Platform.isModLoaded("farm_and_charm")) {
                 return false;
             }
-            if (this.raccoon.level().isDay()) {
+            if (this.raccoon.level().isBrightOutside()) {
                 return false;
             }
-            if (!(this.raccoon.level() instanceof ServerLevel serverLevel) || !serverLevel.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) {
+            if (!(this.raccoon.level() instanceof ServerLevel serverLevel) || !serverLevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
                 return false;
             }
             if (this.raccoon.isSleeping() || this.raccoon.isPanicking() || this.raccoon.isOpeningDoor() || this.raccoon.isContainerLooting() || this.raccoon.isStoringLoot() || this.raccoon.isWashing() || this.raccoon.isSheltering() || this.raccoon.isBaby()) {
@@ -769,7 +769,7 @@ public class RaccoonGoals {
         @Override
         public boolean canContinueToUse() {
             return Platform.isModLoaded("farm_and_charm")
-                    && !this.raccoon.level().isDay()
+                    && !this.raccoon.level().isBrightOutside()
                     && !this.raccoon.isSleeping()
                     && !this.raccoon.isPanicking()
                     && !this.raccoon.isOpeningDoor()
@@ -880,7 +880,7 @@ public class RaccoonGoals {
 
         private boolean isValidEggContainer(BlockPos blockPos) {
             BlockState blockState = this.raccoon.level().getBlockState(blockPos);
-            ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(blockState.getBlock());
+            Identifier blockId = BuiltInRegistries.BLOCK.getKey(blockState.getBlock());
             if (!CHICKEN_COOP_ID.equals(blockId) && !CHICKEN_NEST_ID.equals(blockId)) {
                 return false;
             }
@@ -1133,11 +1133,11 @@ public class RaccoonGoals {
             if (!PlatformHelper.isRaccoonStealingEnabled()) {
                 return false;
             }
-            if (this.raccoon.level().isDay()) {
+            if (this.raccoon.level().isBrightOutside()) {
                 return false;
             }
 
-            if (!(this.raccoon.level() instanceof ServerLevel serverLevel) || !serverLevel.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) {
+            if (!(this.raccoon.level() instanceof ServerLevel serverLevel) || !serverLevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
                 return false;
             }
 
@@ -1166,7 +1166,7 @@ public class RaccoonGoals {
 
         @Override
         public boolean canContinueToUse() {
-            return this.targetCropPos != null && !this.raccoon.level().isDay() && !this.raccoon.isPanicking() && !this.raccoon.isSleeping() && this.raccoon.canNibbleMoreCropsThisNight() && this.isValidCrop(this.targetCropPos);
+            return this.targetCropPos != null && !this.raccoon.level().isBrightOutside() && !this.raccoon.isPanicking() && !this.raccoon.isSleeping() && this.raccoon.canNibbleMoreCropsThisNight() && this.isValidCrop(this.targetCropPos);
         }
 
         @Override
@@ -1213,10 +1213,9 @@ public class RaccoonGoals {
 
             BlockState blockState = this.raccoon.level().getBlockState(this.targetCropPos);
             if (blockState.getBlock() instanceof CropBlock cropBlock) {
-                IntegerProperty ageProperty = cropBlock.getAgeProperty();
-                int currentAge = blockState.getValue(ageProperty);
+                int currentAge = cropBlock.getAge(blockState);
                 if (currentAge > 0) {
-                    this.raccoon.level().setBlock(this.targetCropPos, blockState.setValue(ageProperty, currentAge - 1), 2);
+                    this.raccoon.level().setBlock(this.targetCropPos, cropBlock.getStateForAge(currentAge - 1), 2);
                     this.raccoon.markCropNibbled();
 
                     if (this.raccoon.level() instanceof ServerLevel serverLevel) {
@@ -1266,8 +1265,7 @@ public class RaccoonGoals {
                 return false;
             }
 
-            IntegerProperty ageProperty = cropBlock.getAgeProperty();
-            return blockState.getValue(ageProperty) > 0;
+            return cropBlock.getAge(blockState) > 0;
         }
     }
 }

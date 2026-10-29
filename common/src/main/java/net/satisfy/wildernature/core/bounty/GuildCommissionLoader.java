@@ -3,7 +3,7 @@ package net.satisfy.wildernature.core.bounty;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 
@@ -14,16 +14,16 @@ import java.util.List;
 import java.util.Map;
 
 public final class GuildCommissionLoader {
-    
+
 
     private GuildCommissionLoader() {
     }
 
     public static List<GuildCommissionDefinition> load(ResourceManager resourceManager) {
         List<GuildCommissionDefinition> commissions = new ArrayList<>();
-        Map<ResourceLocation, Resource> resources = resourceManager.listResources("guild_commission", path -> path.getPath().endsWith(".json"));
+        Map<Identifier, Resource> resources = resourceManager.listResources("guild_commission", path -> path.getPath().endsWith(".json"));
 
-        for (Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
+        for (Map.Entry<Identifier, Resource> entry : resources.entrySet()) {
             Resource resource = entry.getValue();
 
             try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(resource.open()))) {

@@ -7,13 +7,19 @@ import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.state.BlockState;
 import net.satisfy.wildernature.WilderNature;
@@ -21,7 +27,7 @@ import net.satisfy.wildernature.core.block.CompletionistBannerBlock;
 import net.satisfy.wildernature.core.block.CompletionistWallBannerBlock;
 import net.satisfy.wildernature.core.block.entity.CompletionistBannerEntity;
 
-public class CompletionistBannerRenderer implements BlockEntityRenderer<CompletionistBannerEntity> {
+public class CompletionistBannerRenderer implements BlockEntityRenderer<CompletionistBannerEntity, CompletionistBannerRenderer.State> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("banner"), "main");
 
     public static final String FLAG = "flag";
@@ -47,52 +53,41 @@ public class CompletionistBannerRenderer implements BlockEntityRenderer<Completi
         return LayerDefinition.create(meshDefinition, 64, 64);
     }
 
-    public static void renderBanner(PoseStack poseStack, MultiBufferSource multiBufferSource, int i, int j, ModelPart modelPart, CompletionistBannerEntity banner) {
-        ResourceLocation location = ((CompletionistBannerBlock) banner.getBlockState().getBlock()).getRenderTexture();
-        VertexConsumer vc = multiBufferSource.getBuffer(RenderType.entitySolid(location));
+    public static class State extends BlockEntityRenderState {
+        public Identifier texture;
+        public boolean wall;
+        public float rotation, wave;
+    }
 
-        modelPart.render(poseStack, vc, i, j);
+    @Override public State createRenderState() { return new State(); }
+
+    @Override
+    public void extractRenderState(CompletionistBannerEntity banner, State state, float partialTick, Vec3 cameraPosition, ModelFeatureRenderer.CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(banner, state, partialTick, cameraPosition, breakProgress);
+        BlockState block = banner.getBlockState();
+        state.texture = ((CompletionistBannerBlock) block.getBlock()).getRenderTexture();
+        state.wall = block.getBlock() instanceof CompletionistWallBannerBlock;
+        state.rotation = state.wall ? -block.getValue(CompletionistWallBannerBlock.FACING).toYRot() + 180.0F
+            : -block.getValue(CompletionistBannerBlock.ROTATION) * 360.0F / 16.0F;
+        long time = banner.getLevel() == null ? 0 : banner.getLevel().getGameTime();
+        BlockPos pos = banner.getBlockPos();
+        float phase = (Math.floorMod(pos.getX() * 7L + pos.getY() * 9L + pos.getZ() * 13L + time, 100L) + partialTick) / 100.0F;
+        state.wave = (-0.0125F + 0.01F * Mth.cos((float) Math.PI * 2 * phase)) * (float) Math.PI;
     }
 
     @Override
-    public void render(CompletionistBannerEntity banner, float f, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, int j) {
-        long time;
-        float scale = 0.66f;
-        boolean inInventory = banner.getLevel() == null;
-
-        poseStack.pushPose();
-        if (inInventory) {
-            time = 0L;
-            poseStack.translate(0.5, 0.5, 0.5);
-            this.pole.visible = true;
-        } else {
-            time = banner.getLevel().getGameTime();
-            BlockState blockState = banner.getBlockState();
-            float rotation;
-            if (!(blockState.getBlock() instanceof CompletionistWallBannerBlock)) {
-                poseStack.translate(0.5, 0.5, 0.5);
-                rotation = (float) (-blockState.getValue(CompletionistBannerBlock.ROTATION) * 360) / 16.0f;
-                poseStack.mulPose(Axis.YP.rotationDegrees(rotation));
-                this.pole.visible = true;
-            } else {
-                poseStack.translate(0.5, -0.1666666716337204, 0.5);
-                rotation = -blockState.getValue(CompletionistWallBannerBlock.FACING).toYRot() + 180.0f;
-                poseStack.mulPose(Axis.YP.rotationDegrees(rotation));
-                poseStack.translate(0.0, -0.3125, -0.4375);
-                this.pole.visible = false;
-            }
-        }
-        poseStack.pushPose();
-        poseStack.scale(scale, -scale, -scale);
-        VertexConsumer vertexConsumer = ModelBakery.BANNER_BASE.buffer(multiBufferSource, RenderType::entitySolid);
-        this.pole.render(poseStack, vertexConsumer, i, j);
-        this.bar.render(poseStack, vertexConsumer, i, j);
-        BlockPos blockPos = banner.getBlockPos();
-        float k = ((float) Math.floorMod(blockPos.getX() * 7L + blockPos.getY() * 9L + blockPos.getZ() * 13L + time, 100L) + f) / 100.0f;
-        this.flag.xRot = (-0.0125f + 0.01f * Mth.cos((float) Math.PI * 2 * k)) * (float) Math.PI;
-        this.flag.y = -32.0f;
-        renderBanner(poseStack, multiBufferSource, i, j, this.flag, banner);
-        poseStack.popPose();
-        poseStack.popPose();
+    public void submit(State state, PoseStack pose, SubmitNodeCollector collector, CameraRenderState cameraState) {
+        pose.pushPose();
+        pose.translate(0.5, state.wall ? -0.1666666716337204 : 0.5, 0.5);
+        pose.rotate(Axis.YP.rotationDegrees(state.rotation));
+        if (state.wall) pose.translate(0, -0.3125, -0.4375);
+        pose.scale(0.66F, -0.66F, -0.66F);
+        var supportType = RenderTypes.entitySolid(Identifier.withDefaultNamespace("textures/entity/banner/banner_base.png"));
+        if (!state.wall) collector.submitModelPart(pole, pose, supportType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
+        collector.submitModelPart(bar, pose, supportType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
+        flag.xRot = state.wave;
+        flag.y = -32;
+        collector.submitModelPart(flag, pose, RenderTypes.entitySolid(state.texture), state.lightCoords, OverlayTexture.NO_OVERLAY, null);
+        pose.popPose();
     }
 }

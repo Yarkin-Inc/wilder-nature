@@ -6,7 +6,8 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "functions": [
+          "name": "wildernature:thick_leather",
+          "modifier": [
             {
               "add": false,
               "count": {
@@ -14,19 +15,18 @@
                 "max": 3.0,
                 "min": 2.0
               },
-              "function": "minecraft:set_count"
+              "type": "minecraft:set_count"
             },
             {
-              "function": "minecraft:enchanted_count_increase",
               "enchantment": "minecraft:looting",
               "count": {
                 "type": "minecraft:uniform",
                 "max": 1.0,
                 "min": 0.0
-              }
+              },
+              "type": "minecraft:enchanted_count_increase"
             }
-          ],
-          "name": "wildernature:thick_leather"
+          ]
         }
       ],
       "rolls": 1.0

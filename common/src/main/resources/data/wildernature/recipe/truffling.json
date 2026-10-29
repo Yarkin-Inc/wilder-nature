@@ -1,8 +1,6 @@
 {
   "type": "wildernature:truffling",
   "ingredients": [
-    {
-      "tag": "wildernature:truffles"
-    }
+    "#wildernature:truffles"
   ]
 }

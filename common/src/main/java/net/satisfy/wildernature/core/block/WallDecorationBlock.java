@@ -17,7 +17,7 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 
 public class WallDecorationBlock extends HorizontalDirectionalBlock {
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     private static final Map<Direction, VoxelShape> BOUNDING_SHAPES;
 
     static {
@@ -43,12 +43,8 @@ public class WallDecorationBlock extends HorizontalDirectionalBlock {
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
-    public static final MapCodec<WallDecorationBlock> CODEC = simpleCodec(WallDecorationBlock::new);
 
-    @Override
-    protected @NotNull MapCodec<? extends HorizontalDirectionalBlock> codec() {
-        return CODEC;
-    }
+
 
     public static VoxelShape getBoundingShape(BlockState state) {
         return BOUNDING_SHAPES.get(state.getValue(FACING));
@@ -87,7 +83,7 @@ public class WallDecorationBlock extends HorizontalDirectionalBlock {
         return null;
     }
 
-    public @NotNull BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor world, BlockPos pos, BlockPos neighborPos) {
+    public @NotNull BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader world, net.minecraft.world.level.ScheduledTickAccess scheduledTicks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
         return direction.getOpposite() == state.getValue(FACING) && !state.canSurvive(world, pos) ? Blocks.AIR.defaultBlockState() : state;
     }
 

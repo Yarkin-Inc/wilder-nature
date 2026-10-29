@@ -7,7 +7,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -245,7 +245,7 @@ public class TermiteMoundBlockEntity extends BlockEntity {
 
     @Nullable
     private static TermiteEntity releaseTermite(ServerLevel level, BlockPos entrancePos) {
-        TermiteEntity termite = EntityTypeRegistry.TERMITE.get().create(level);
+        TermiteEntity termite = EntityTypeRegistry.TERMITE.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
         if (termite == null) {
             return null;
         }
@@ -255,10 +255,10 @@ public class TermiteMoundBlockEntity extends BlockEntity {
         double spawnY = exitPos.getY() + 0.1D;
         double spawnZ = exitPos.getZ() + 0.5D;
 
-        termite.moveTo(spawnX, spawnY, spawnZ, level.getRandom().nextFloat() * 360.0F, 0.0F);
+        termite.snapTo(spawnX, spawnY, spawnZ, level.getRandom().nextFloat() * 360.0F, 0.0F);
         termite.setMoundPos(entrancePos);
         termite.setReturningToMound(false);
-        termite.finalizeSpawn(level, level.getCurrentDifficultyAt(exitPos), MobSpawnType.SPAWNER, null);
+        termite.finalizeSpawn(level, level.getCurrentDifficultyAt(exitPos), EntitySpawnReason.SPAWNER, null);
 
         level.playSound(null, entrancePos, net.minecraft.sounds.SoundEvents.BEEHIVE_EXIT, net.minecraft.sounds.SoundSource.BLOCKS, 0.9F, 0.35F + level.getRandom().nextFloat() * 0.1F);
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.POOF, spawnX, spawnY + 0.2D, spawnZ, 6, 0.2D, 0.1D, 0.2D, 0.02D);
@@ -291,40 +291,32 @@ public class TermiteMoundBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput tag) {
+        super.saveAdditional(tag);
         tag.putInt("StoredTermites", this.storedTermites);
         tag.putInt("ReleaseCooldown", this.releaseCooldown);
         tag.putInt("ReproductionCooldown", this.reproductionCooldown);
         tag.putInt("NextInfestationId", this.nextInfestationId);
         tag.putBoolean("Initialized", this.initialized);
-        tag.put("ActiveInfestationIds", new IntArrayTag(this.activeInfestationIds.stream().mapToInt(Integer::intValue).toArray()));
+        tag.putIntArray("ActiveInfestationIds", this.activeInfestationIds.stream().mapToInt(Integer::intValue).toArray());
 
-        ListTag releasedTermitesTag = new ListTag();
-        for (UUID termiteId : this.releasedTermiteIds) {
-            releasedTermitesTag.add(NbtUtils.createUUID(termiteId));
-        }
-        tag.put("ReleasedTermites", releasedTermitesTag);
+        tag.store("ReleasedTermites", net.minecraft.core.UUIDUtil.CODEC.listOf(), java.util.List.copyOf(this.releasedTermiteIds));
     }
 
     @Override
-    public void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        this.storedTermites = tag.getInt("StoredTermites");
-        this.releaseCooldown = tag.getInt("ReleaseCooldown");
-        this.reproductionCooldown = tag.contains("ReproductionCooldown") ? tag.getInt("ReproductionCooldown") : REPRODUCTION_CHECK_INTERVAL;
-        this.nextInfestationId = Math.max(1, tag.getInt("NextInfestationId"));
-        this.initialized = tag.getBoolean("Initialized");
+    public void loadAdditional(net.minecraft.world.level.storage.ValueInput tag) {
+        super.loadAdditional(tag);
+        this.storedTermites = tag.getIntOr("StoredTermites", 0);
+        this.releaseCooldown = tag.getIntOr("ReleaseCooldown", 0);
+        this.reproductionCooldown = tag.getIntOr("ReproductionCooldown", REPRODUCTION_CHECK_INTERVAL);
+        this.nextInfestationId = Math.max(1, tag.getIntOr("NextInfestationId", 0));
+        this.initialized = tag.getBooleanOr("Initialized", false);
         this.activeInfestationIds.clear();
-        for (int infestationId : tag.getIntArray("ActiveInfestationIds")) {
+        for (int infestationId : tag.getIntArray("ActiveInfestationIds").orElseGet(() -> new int[0])) {
             this.activeInfestationIds.add(infestationId);
         }
 
         this.releasedTermiteIds.clear();
-        if (tag.contains("ReleasedTermites")) {
-            for (Tag termiteIdTag : tag.getList("ReleasedTermites", Tag.TAG_INT_ARRAY)) {
-                this.releasedTermiteIds.add(NbtUtils.loadUUID(termiteIdTag));
-            }
-        }
+        this.releasedTermiteIds.addAll(tag.read("ReleasedTermites", net.minecraft.core.UUIDUtil.CODEC.listOf()).orElseGet(java.util.List::of));
     }
 }

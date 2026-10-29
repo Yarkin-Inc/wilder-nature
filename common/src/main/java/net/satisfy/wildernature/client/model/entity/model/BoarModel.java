@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.BoarRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -16,13 +16,14 @@ import net.satisfy.wildernature.core.entity.animal.passive.BoarEntity;
 import org.jetbrains.annotations.NotNull;
 
 @Environment(EnvType.CLIENT)
-public class BoarModel<T extends BoarEntity> extends HierarchicalModel<T> {
+public class BoarModel<T extends BoarRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("boar"), "main");
 
     private final ModelPart boar;
     private final ModelPart head;
 
     public BoarModel(ModelPart root) {
+        super(root);
         this.boar = root.getChild("boar");
         this.head = this.boar.getChild("body").getChild("head");
     }
@@ -64,7 +65,12 @@ public class BoarModel<T extends BoarEntity> extends HierarchicalModel<T> {
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         float yaw = netHeadYaw * Mth.DEG_TO_RAD;
@@ -89,13 +95,7 @@ public class BoarModel<T extends BoarEntity> extends HierarchicalModel<T> {
         this.head.xRot += pitch;
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.boar.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.boar;
-    }
+
+
 }

@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.HippoRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -12,12 +12,13 @@ import net.satisfy.wildernature.client.model.entity.animation.BabyHippoAnimation
 import net.satisfy.wildernature.core.entity.animal.defensive.HippoEntity;
 import org.jetbrains.annotations.NotNull;
 
-public class BabyHippoModel<T extends HippoEntity> extends HierarchicalModel<T> {
+public class BabyHippoModel<T extends HippoRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("baby_hippo"), "main");
 
     private final ModelPart babyHippo;
 
     public BabyHippoModel(ModelPart root) {
+        super(root);
         this.babyHippo = root.getChild("baby_hippo");
         ModelPart hHead = this.babyHippo.getChild("h_head");
         ModelPart jaw = hHead.getChild("jaw");
@@ -53,10 +54,15 @@ public class BabyHippoModel<T extends HippoEntity> extends HierarchicalModel<T> 
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
-        if (entity.isInWaterOrBubble()) {
+        if (entity.isInWater()) {
             this.animateWalk(BabyHippoAnimation.swim, limbSwing, limbSwingAmount, 1.2F, 2.0F);
         } else {
             this.animateWalk(BabyHippoAnimation.walk, limbSwing, limbSwingAmount, 1.4F, 2.0F);
@@ -68,13 +74,7 @@ public class BabyHippoModel<T extends HippoEntity> extends HierarchicalModel<T> 
         this.animate(entity.threatState, BabyHippoAnimation.threat, ageInTicks, 1.0F);
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.babyHippo.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.babyHippo;
-    }
+
+
 }

@@ -5,7 +5,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -116,7 +116,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
 
     private void wobbleBoard(ServerPlayer serverPlayer) {
         if (this.boardPos != null) {
-            serverPlayer.serverLevel().blockEvent(this.boardPos, serverPlayer.serverLevel().getBlockState(this.boardPos).getBlock(), BountyBoardBlockEntity.WOBBLE_EVENT, 0);
+            serverPlayer.level().blockEvent(this.boardPos, serverPlayer.level().getBlockState(this.boardPos).getBlock(), BountyBoardBlockEntity.WOBBLE_EVENT, 0);
         }
     }
 
@@ -246,11 +246,11 @@ public class BountyBoardMenu extends AbstractContainerMenu {
         }
 
         CompoundTag customDataTag = customData.copyTag();
-        if (!customDataTag.hasUUID("BountyId")) {
+        if (!customDataTag.read("BountyId", net.minecraft.core.UUIDUtil.CODEC).isPresent()) {
             return false;
         }
 
-        return customDataTag.getUUID("BountyId").equals(activeBounty.get().id());
+        return customDataTag.read("BountyId", net.minecraft.core.UUIDUtil.CODEC).orElseThrow().equals(activeBounty.get().id());
     }
 
     private boolean canRestoreActiveContract(ItemStack itemStack) {
@@ -297,7 +297,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
 
         slotStack.shrink(1);
         this.contractPreviewContainer.setItem(0, restoredContractStack);
-        serverPlayer.serverLevel().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_ACCEPTED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+        serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_ACCEPTED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
         this.wobbleBoard(serverPlayer);
 
         if (playerBountyData.isCompleted()) {
@@ -340,7 +340,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
         sourceStack.shrink(1);
         sourceSlot.setChanged();
         this.contractPreviewContainer.setItem(0, restoredContractStack);
-        serverPlayer.serverLevel().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_ACCEPTED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+        serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_ACCEPTED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
         this.wobbleBoard(serverPlayer);
 
         if (playerBountyData.isCompleted()) {
@@ -391,7 +391,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
         BountyManager.savePlayerBountyData(serverPlayer, playerBountyData);
 
         if (!playerBountyData.isItemRewardClaimed()) {
-            ItemStack rewardItemStack = new ItemStack(BuiltInRegistries.ITEM.get(activeBounty.get().reward().previewItemId()), activeBounty.get().reward().previewCount());
+            ItemStack rewardItemStack = new ItemStack(BuiltInRegistries.ITEM.getValue(activeBounty.get().reward().previewItemId()), activeBounty.get().reward().previewCount());
             this.rewardContainer.setItem(0, rewardItemStack);
         }
 
@@ -402,7 +402,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
 
         this.rewardsUnlocked.set(1);
 
-        serverPlayer.serverLevel().playSound(null, serverPlayer.blockPosition(), SoundEvents.VAULT_OPEN_SHUTTER, SoundSource.BLOCKS, 0.8F, 1.0F);
+        serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEvents.VAULT_OPEN_SHUTTER, SoundSource.BLOCKS, 0.8F, 1.0F);
 
         this.wobbleBoard(serverPlayer);
 
@@ -454,7 +454,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
             return;
         }
 
-        serverPlayer.serverLevel().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_COMPLETED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+        serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_COMPLETED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
 
         this.wobbleBoard(serverPlayer);
         this.contractPreviewContainer.setItem(0, ItemStack.EMPTY);
@@ -483,7 +483,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
 
     private List<BountyDefinition> resolveBounties() {
         if (this.playerInventory.player instanceof ServerPlayer serverPlayer) {
-            return BountyManager.getBoardBounties(serverPlayer.serverLevel(), BountyManager.getPlayerBountyData(serverPlayer));
+            return BountyManager.getBoardBounties(serverPlayer.level(), BountyManager.getPlayerBountyData(serverPlayer));
         }
 
         return List.of();
@@ -535,7 +535,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
             int previewCount = friendlyByteBuf.readVarInt();
             boolean guildCommission = friendlyByteBuf.readBoolean();
 
-            syncedBounties.add(new BountyDefinition(bountyId, BountyDefinition.BountyType.byName(typeName), BountyDefinition.BountyTargetType.byName(targetTypeName), BountyCategory.byName(categoryName), ResourceLocation.parse(targetIdString), requiredAmount, new BountyReward(ResourceLocation.parse(lootTableIdString), experienceReward, ResourceLocation.parse(previewItemIdString), previewCount), guildCommission));
+            syncedBounties.add(new BountyDefinition(bountyId, BountyDefinition.BountyType.byName(typeName), BountyDefinition.BountyTargetType.byName(targetTypeName), BountyCategory.byName(categoryName), Identifier.parse(targetIdString), requiredAmount, new BountyReward(Identifier.parse(lootTableIdString), experienceReward, Identifier.parse(previewItemIdString), previewCount), guildCommission));
         }
 
         return syncedBounties;
@@ -634,7 +634,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
 
         PlayerBountyData playerBountyData = BountyManager.getPlayerBountyData(serverPlayer);
         BountyManager.giveOrRestoreContract(serverPlayer, targetBounty.get(), playerBountyData.getCurrentProgress());
-        serverPlayer.serverLevel().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_ACCEPTED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+        serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_ACCEPTED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
         this.wobbleBoard(serverPlayer);
 
         this.updateActiveData();
@@ -654,7 +654,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
 
         playerBountyData.abandonActiveBounty();
         BountyManager.savePlayerBountyData(serverPlayer, playerBountyData);
-        serverPlayer.serverLevel().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_CANCELED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+        serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_CANCELED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
         this.wobbleBoard(serverPlayer);
 
         this.contractPreviewContainer.setItem(0, ItemStack.EMPTY);
@@ -673,7 +673,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
 
         boolean claimed = BountyManager.claimActiveBounty(serverPlayer);
         if (claimed) {
-            serverPlayer.serverLevel().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_ACCEPTED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+            serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEventRegistry.BOUNTY_ACCEPTED.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
             this.wobbleBoard(serverPlayer);
             this.selectedBountyIndex = this.findFirstSelectableBountyIndex();
             this.updateActiveData();
@@ -746,7 +746,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
             if (playerBountyData.isCompleted() && rewardsUnlockedPersistent) {
 
                 if (!playerBountyData.isItemRewardClaimed() && this.rewardContainer.getItem(0).isEmpty()) {
-                    ItemStack rewardItemStack = new ItemStack(BuiltInRegistries.ITEM.get(activeBounty.reward().previewItemId()), activeBounty.reward().previewCount());
+                    ItemStack rewardItemStack = new ItemStack(BuiltInRegistries.ITEM.getValue(activeBounty.reward().previewItemId()), activeBounty.reward().previewCount());
                     this.rewardContainer.setItem(0, rewardItemStack);
                 }
 
@@ -833,7 +833,7 @@ public class BountyBoardMenu extends AbstractContainerMenu {
         }
 
         CompoundTag customDataTag = customData.copyTag();
-        return customDataTag.hasUUID("BountyId") && customDataTag.getUUID("BountyId").equals(bountyId);
+        return customDataTag.read("BountyId", net.minecraft.core.UUIDUtil.CODEC).isPresent() && customDataTag.read("BountyId", net.minecraft.core.UUIDUtil.CODEC).orElseThrow().equals(bountyId);
     }
 
     public void applySyncFromServer(int selectedBountyIndex, boolean hasActiveBounty, int activeBountyIndex, int activeProgress, int activeRequiredKills, boolean activeCompleted, boolean restoreContractAvailable, boolean rewardsUnlocked, List<UUID> abandonedBountyIds) {

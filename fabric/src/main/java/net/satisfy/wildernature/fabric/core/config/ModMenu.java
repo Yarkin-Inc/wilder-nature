@@ -10,6 +10,6 @@ import net.fabricmc.api.Environment;
 public class ModMenu implements ModMenuApi {
     @Override
     public ConfigScreenFactory<?> getModConfigScreenFactory() {
-        return parent -> AutoConfig.getConfigScreen(WilderNatureFabricConfig.class, parent).get();
+        return parent -> me.shedaniel.autoconfig.AutoConfigClient.getConfigScreen(WilderNatureFabricConfig.class, parent).get();
     }
 }

@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.passive;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ItemParticleOption;
@@ -48,7 +50,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class BoarEntity extends Animal implements CacheEatingMob {
-    private static final Ingredient FOOD_ITEMS = Ingredient.of(TagsRegistry.BOAR_FOOD);
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOOD_ITEMS = (stack -> stack.is(TagsRegistry.BOAR_FOOD));
     private static final ResourceKey<LootTable> ROOTING_LOOT_TABLE = ResourceKey.create(Registries.LOOT_TABLE, WilderNature.identifier("gameplay/boar_rooting"));
     private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(BoarEntity.class, EntityDataSerializers.BOOLEAN);
 
@@ -87,7 +89,7 @@ public class BoarEntity extends Animal implements CacheEatingMob {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MAX_HEALTH, 12.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.2D)
                 .add(Attributes.ATTACK_DAMAGE, 2.0D);
@@ -206,7 +208,7 @@ public class BoarEntity extends Animal implements CacheEatingMob {
             this.denyAnimationTick--;
         }
 
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.updateSleep();
         }
         if (this.level().isClientSide()) {
@@ -226,7 +228,7 @@ public class BoarEntity extends Animal implements CacheEatingMob {
             return;
         }
 
-        boolean isNight = !this.level().isDay();
+        boolean isNight = !this.level().isBrightOutside();
         boolean isStill = this.getDeltaMovement().horizontalDistanceSqr() < 0.01D;
         boolean isOnValidGround = this.level().getBlockState(this.blockPosition().below()).is(Blocks.GRASS_BLOCK)
                 || this.level().getBlockState(this.blockPosition().below()).is(Blocks.DIRT)
@@ -297,7 +299,7 @@ public class BoarEntity extends Animal implements CacheEatingMob {
         } else {
             animationSpeed = 0.0F;
         }
-        this.walkAnimation.update(animationSpeed, 0.2F);
+        this.walkAnimation.update(animationSpeed, 0.2F, 1.0F);
     }
 
     public boolean isDigging() {
@@ -344,7 +346,7 @@ public class BoarEntity extends Animal implements CacheEatingMob {
         ItemStack itemStack = player.getItemInHand(hand);
 
         if (itemStack.is(ObjectRegistry.TRUFFLE.get())) {
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 boolean startedRooting = this.tryStartRootingFromPlayer();
                 if (startedRooting) {
                     if (!player.getAbilities().instabuild) {
@@ -354,7 +356,7 @@ public class BoarEntity extends Animal implements CacheEatingMob {
                 }
                 this.triggerDenyFeedback();
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            return InteractionResult.SUCCESS;
         }
         return super.mobInteract(player, hand);
     }
@@ -485,7 +487,7 @@ public class BoarEntity extends Animal implements CacheEatingMob {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         tag.putBoolean("Digging", this.isDigging());
         tag.putBoolean("Sleeping", this.isSleeping());
@@ -505,19 +507,19 @@ public class BoarEntity extends Animal implements CacheEatingMob {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        this.digAnimationTick = tag.getInt("DigAnimationTick");
-        this.setSleeping(tag.getBoolean("Sleeping"));
-        this.rootingCooldownTicks = tag.getInt("RootingCooldownTicks");
-        this.denyAnimationTick = tag.getInt("DenyAnimationTick");
-        this.sleepPreparationTicks = tag.getInt("SleepPreparationTicks");
-        this.requiredSleepPreparationTicks = tag.contains("RequiredSleepPreparationTicks") ? tag.getInt("RequiredSleepPreparationTicks") : 80 + this.random.nextInt(80);
-        this.sleepCooldownTicks = tag.getInt("SleepCooldownTicks");
-        this.forceRooting = tag.getBoolean("ForceRooting");
+        this.digAnimationTick = tag.getIntOr("DigAnimationTick", 0);
+        this.setSleeping(tag.getBooleanOr("Sleeping", false));
+        this.rootingCooldownTicks = tag.getIntOr("RootingCooldownTicks", 0);
+        this.denyAnimationTick = tag.getIntOr("DenyAnimationTick", 0);
+        this.sleepPreparationTicks = tag.getIntOr("SleepPreparationTicks", 0);
+        this.requiredSleepPreparationTicks = tag.read("RequiredSleepPreparationTicks", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() ? tag.getIntOr("RequiredSleepPreparationTicks", 0) : 80 + this.random.nextInt(80);
+        this.sleepCooldownTicks = tag.getIntOr("SleepCooldownTicks", 0);
+        this.forceRooting = tag.getBooleanOr("ForceRooting", false);
 
-        if (tag.contains("RequestedRootingTargetX") && tag.contains("RequestedRootingTargetY") && tag.contains("RequestedRootingTargetZ")) {
-            this.requestedRootingTarget = new BlockPos(tag.getInt("RequestedRootingTargetX"), tag.getInt("RequestedRootingTargetY"), tag.getInt("RequestedRootingTargetZ"));
+        if (tag.read("RequestedRootingTargetX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && tag.read("RequestedRootingTargetY", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && tag.read("RequestedRootingTargetZ", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.requestedRootingTarget = new BlockPos(tag.getIntOr("RequestedRootingTargetX", 0), tag.getIntOr("RequestedRootingTargetY", 0), tag.getIntOr("RequestedRootingTargetZ", 0));
         } else {
             this.requestedRootingTarget = null;
         }
@@ -582,7 +584,7 @@ public class BoarEntity extends Animal implements CacheEatingMob {
                 double velocityX = (this.random.nextDouble() - 0.5D) * 0.08D;
                 double velocityY = this.random.nextDouble() * 0.08D;
                 double velocityZ = (this.random.nextDouble() - 0.5D) * 0.08D;
-                serverLevel.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, itemStack), this.getX() + offsetX, this.getY() + offsetY, this.getZ() + offsetZ, 1, velocityX, velocityY, velocityZ, 0.0D);
+                serverLevel.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, net.minecraft.world.item.ItemStackTemplate.fromStack(itemStack)), this.getX() + offsetX, this.getY() + offsetY, this.getZ() + offsetZ, 1, velocityX, velocityY, velocityZ, 0.0D);
             }
         }
     }
@@ -624,7 +626,7 @@ public class BoarEntity extends Animal implements CacheEatingMob {
 
     @Override
     public BoarEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.BOAR.get().create(serverLevel);
+        return EntityTypeRegistry.BOAR.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override

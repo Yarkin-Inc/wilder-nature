@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.neutral;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.particles.ItemParticleOption;
@@ -28,7 +30,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Block;
@@ -66,7 +68,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
     private static final EntityDataAccessor<Boolean> DATA_SHELTERING = SynchedEntityData.defineId(SquirrelEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_FORAGING = SynchedEntityData.defineId(SquirrelEntity.class, EntityDataSerializers.BOOLEAN);
 
-    private static final Ingredient TEMPT_INGREDIENT = Ingredient.of(TagsRegistry.SQUIRREL_HOLDABLE);
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> TEMPT_INGREDIENT = (stack -> stack.is(TagsRegistry.SQUIRREL_HOLDABLE));
     private static final ResourceKey<LootTable> GIFT_LOOT_TABLE = ResourceKey.create(Registries.LOOT_TABLE, WilderNature.identifier("gameplay/squirrel_gifts"));
 
     public static final int VARIANT_UNSET = -1;
@@ -137,7 +139,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MAX_HEALTH, 10.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.3D);
     }
@@ -178,7 +180,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compoundTag) {
+    public void addAdditionalSaveData(ValueOutput compoundTag) {
         super.addAdditionalSaveData(compoundTag);
         compoundTag.putInt("TrustLevel", this.getTrustLevel());
         compoundTag.putInt("FeedCooldown", this.feedCooldownTicks);
@@ -192,46 +194,46 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
         compoundTag.putInt("ForageCooldown", this.forageCooldownTicks);
 
         if (!this.pendingGiftStack.isEmpty()) {
-            compoundTag.put("PendingGiftStack", this.pendingGiftStack.saveOptional(this.registryAccess()));
+            compoundTag.store("PendingGiftStack", ItemStack.OPTIONAL_CODEC, this.pendingGiftStack);
         }
 
-        ContainerHelper.saveAllItems(compoundTag, this.squirrelInventory, this.registryAccess());
+        ContainerHelper.saveAllItems(compoundTag, this.squirrelInventory);
 
         if (this.giftTargetPlayerUuid != null) {
-            compoundTag.putUUID("GiftTargetPlayer", this.giftTargetPlayerUuid);
+            compoundTag.store("GiftTargetPlayer", net.minecraft.core.UUIDUtil.CODEC, this.giftTargetPlayerUuid);
         }
 
         if (this.lastTrustedPlayerUuid != null) {
-            compoundTag.putUUID("LastTrustedPlayer", this.lastTrustedPlayerUuid);
+            compoundTag.store("LastTrustedPlayer", net.minecraft.core.UUIDUtil.CODEC, this.lastTrustedPlayerUuid);
         }
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compoundTag) {
+    public void readAdditionalSaveData(ValueInput compoundTag) {
         super.readAdditionalSaveData(compoundTag);
-        this.setTrustLevel(compoundTag.getInt("TrustLevel"));
-        this.feedCooldownTicks = compoundTag.getInt("FeedCooldown");
-        this.pettingCooldownTicks = compoundTag.getInt("PettingCooldown");
-        this.giftCooldownTicks = compoundTag.getInt("GiftCooldown");
-        this.giftFailCooldownTicks = compoundTag.getInt("GiftFailCooldown");
-        this.giftWiggleTicks = compoundTag.getInt("GiftWiggleTicks");
-        this.wiggleTicks = compoundTag.getInt("WiggleTicks");
-        this.cacheStoreCooldownTicks = compoundTag.getInt("CacheStoreCooldown");
-        this.forageCooldownTicks = compoundTag.getInt("ForageCooldown");
+        this.setTrustLevel(compoundTag.getIntOr("TrustLevel", 0));
+        this.feedCooldownTicks = compoundTag.getIntOr("FeedCooldown", 0);
+        this.pettingCooldownTicks = compoundTag.getIntOr("PettingCooldown", 0);
+        this.giftCooldownTicks = compoundTag.getIntOr("GiftCooldown", 0);
+        this.giftFailCooldownTicks = compoundTag.getIntOr("GiftFailCooldown", 0);
+        this.giftWiggleTicks = compoundTag.getIntOr("GiftWiggleTicks", 0);
+        this.wiggleTicks = compoundTag.getIntOr("WiggleTicks", 0);
+        this.cacheStoreCooldownTicks = compoundTag.getIntOr("CacheStoreCooldown", 0);
+        this.forageCooldownTicks = compoundTag.getIntOr("ForageCooldown", 0);
         this.setWiggling(this.wiggleTicks > 0);
-        this.setVariant(compoundTag.contains("Variant") ? compoundTag.getInt("Variant") : VARIANT_UNSET);
-        this.pendingGiftStack = compoundTag.contains("PendingGiftStack")
-                ? ItemStack.parseOptional(this.registryAccess(), compoundTag.getCompound("PendingGiftStack"))
+        this.setVariant(compoundTag.read("Variant", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() ? compoundTag.getIntOr("Variant", 0) : VARIANT_UNSET);
+        this.pendingGiftStack = compoundTag.read("PendingGiftStack", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()
+                ? compoundTag.read("PendingGiftStack", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;
         this.squirrelInventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(compoundTag, this.squirrelInventory, this.registryAccess());
-        this.giftTargetPlayerUuid = compoundTag.hasUUID("GiftTargetPlayer") ? compoundTag.getUUID("GiftTargetPlayer") : null;
-        this.lastTrustedPlayerUuid = compoundTag.hasUUID("LastTrustedPlayer") ? compoundTag.getUUID("LastTrustedPlayer") : null;
+        ContainerHelper.loadAllItems(compoundTag, this.squirrelInventory);
+        this.giftTargetPlayerUuid = compoundTag.read("GiftTargetPlayer", net.minecraft.core.UUIDUtil.CODEC).isPresent() ? compoundTag.read("GiftTargetPlayer", net.minecraft.core.UUIDUtil.CODEC).orElse(null) : null;
+        this.lastTrustedPlayerUuid = compoundTag.read("LastTrustedPlayer", net.minecraft.core.UUIDUtil.CODEC).isPresent() ? compoundTag.read("LastTrustedPlayer", net.minecraft.core.UUIDUtil.CODEC).orElse(null) : null;
     }
 
     @Nullable
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, net.minecraft.world.DifficultyInstance difficulty, net.minecraft.world.entity.MobSpawnType spawnType, @Nullable SpawnGroupData spawnGroupData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, net.minecraft.world.DifficultyInstance difficulty, net.minecraft.world.entity.EntitySpawnReason spawnType, @Nullable SpawnGroupData spawnGroupData) {
         SpawnGroupData finalizedSpawnGroupData = super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
         this.updateVariantFromBiome();
         return finalizedSpawnGroupData;
@@ -240,7 +242,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob ageableMob) {
-        return EntityTypeRegistry.SQUIRREL.get().create(level);
+        return EntityTypeRegistry.SQUIRREL.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -348,12 +350,12 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
                 && !this.isWiggling()
                 && !this.isBaby()
                 && !this.isForaging()
-                && this.level().isNight();
+                && this.level().isDarkOutside();
     }
 
     @Override
     public boolean canContinueShelterGoal() {
-        return this.level().isNight()
+        return this.level().isDarkOutside()
                 && !this.isPanicking();
     }
 
@@ -439,7 +441,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
                 double velocityX = (this.random.nextDouble() - 0.5D) * 0.08D;
                 double velocityY = this.random.nextDouble() * 0.08D;
                 double velocityZ = (this.random.nextDouble() - 0.5D) * 0.08D;
-                serverLevel.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, itemStack), this.getX() + offsetX, this.getY() + offsetY, this.getZ() + offsetZ, 1, velocityX, velocityY, velocityZ, 0.0D);
+                serverLevel.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, net.minecraft.world.item.ItemStackTemplate.fromStack(itemStack)), this.getX() + offsetX, this.getY() + offsetY, this.getZ() + offsetZ, 1, velocityX, velocityY, velocityZ, 0.0D);
             }
         }
     }
@@ -595,7 +597,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
     }
 
     public void harvestHazelnutBush(ServerLevel serverLevel, BlockPos blockPos, BlockState blockState) {
-        if (!serverLevel.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) {
+        if (!serverLevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
             return;
         }
 
@@ -603,7 +605,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
             return;
         }
 
-        int hazelnutCount = 1 + serverLevel.random.nextInt(2);
+        int hazelnutCount = 1 + serverLevel.getRandom().nextInt(2);
         if (blockState.getValue(HazelnutBushBlock.AGE) >= 3) {
             hazelnutCount++;
         }
@@ -704,7 +706,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
                     this.startWiggle(PETTING_WIGGLE_DURATION);
                     this.level().broadcastEntityEvent(this, LOVE_EVENT);
                 }
-                return InteractionResult.sidedSuccess(this.level().isClientSide());
+                return InteractionResult.SUCCESS;
             }
 
             return super.mobInteract(player, hand);
@@ -715,7 +717,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
                 this.usePlayerItem(player, hand, itemStack);
                 this.setInLove(player);
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide());
+            return InteractionResult.SUCCESS;
         }
 
         if (this.canAcceptTrustItem(itemStack) && this.feedCooldownTicks <= 0 && !this.isBaby() && this.hasFreeInventorySlot() && this.getMainHandItem().isEmpty()) {
@@ -728,7 +730,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
                 this.pendingTrustPlayerUuid = player.getUUID();
                 this.startWiggle(40);
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide());
+            return InteractionResult.SUCCESS;
         }
 
         return super.mobInteract(player, hand);
@@ -843,7 +845,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
             this.setClimbing(this.horizontalCollision);
             this.updateVariantFromBiome();
 
-            if (this.isSheltering() && this.level().isNight() && this.getDeltaMovement().horizontalDistanceSqr() < 1.0E-4D && this.random.nextInt(20) == 0) {
+            if (this.isSheltering() && this.level().isDarkOutside() && this.getDeltaMovement().horizontalDistanceSqr() < 1.0E-4D && this.random.nextInt(20) == 0) {
                 ServerLevel serverLevel = (ServerLevel) this.level();
                 serverLevel.sendParticles(ParticleTypeRegistry.SLEEPING.get(), this.getX(), this.getY() + 0.8D, this.getZ(), 1, 0.1D, 0.05D, 0.1D, 0.0D);
             }
@@ -870,13 +872,13 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
     }
 
     @Override
-    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource damageSource) {
+    public boolean causeFallDamage(double fallDistance, float multiplier, DamageSource damageSource) {
         return false;
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float damageAmount) {
-        boolean wasHurt = super.hurt(damageSource, damageAmount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float damageAmount) {
+        boolean wasHurt = super.hurtServer(serverLevel, damageSource, damageAmount);
         if (wasHurt && !this.level().isClientSide() && damageSource.getEntity() instanceof Player) {
             this.removeTrust();
         }
@@ -894,7 +896,7 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
 
         for (ItemStack itemStack : this.squirrelInventory) {
             if (!itemStack.isEmpty()) {
-                this.spawnAtLocation(itemStack.copy());
+                this.spawnAtLocation((net.minecraft.server.level.ServerLevel) level(), itemStack.copy());
             }
         }
     }
@@ -911,12 +913,12 @@ public class SquirrelEntity extends Animal implements CacheStoringMob, Shelterin
 
     @Override
     public boolean canUseStoreGoal() {
-        return !this.isPanicking() && !this.isWiggling() && !this.isDeliveringGift() && !this.isSheltering() && !this.level().isNight() && !this.isForaging();
+        return !this.isPanicking() && !this.isWiggling() && !this.isDeliveringGift() && !this.isSheltering() && !this.level().isDarkOutside() && !this.isForaging();
     }
 
     @Override
     public boolean canContinueStoreGoal() {
-        return !this.isPanicking() && !this.level().isNight();
+        return !this.isPanicking() && !this.level().isDarkOutside();
     }
 
     @Override

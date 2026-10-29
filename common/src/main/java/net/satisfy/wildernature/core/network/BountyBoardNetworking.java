@@ -3,173 +3,125 @@ package net.satisfy.wildernature.core.network;
 import dev.architectury.networking.NetworkManager;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
-import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.satisfy.wildernature.WilderNature;
 import net.satisfy.wildernature.client.ClientBountyBoardNotes;
-import net.satisfy.wildernature.core.bounty.BountyBoardSavedData;
-import net.satisfy.wildernature.core.bounty.BountyDefinition;
-import net.satisfy.wildernature.core.bounty.BountyManager;
-import net.satisfy.wildernature.core.bounty.PlayerBountyData;
+import net.satisfy.wildernature.core.bounty.*;
 import net.satisfy.wildernature.core.gui.handler.BountyBoardMenu;
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-@SuppressWarnings("removal")
 public final class BountyBoardNetworking {
-    public static final ResourceLocation ACCEPT = WilderNature.identifier("bounty_accept");
-    public static final ResourceLocation ABANDON = WilderNature.identifier("bounty_abandon");
-    public static final ResourceLocation CLAIM = WilderNature.identifier("bounty_claim");
-    public static final ResourceLocation SELECT = WilderNature.identifier("bounty_select");
-    public static final ResourceLocation SYNC = WilderNature.identifier("bounty_sync");
-    public static final ResourceLocation NOTES = WilderNature.identifier("bounty_board_notes");
     private static final int NOTES_INTERVAL = 40;
     private static final Map<UUID, Integer> SENT_NOTES = new HashMap<>();
 
+    public enum Action { ACCEPT, ABANDON, CLAIM, SELECT }
+
+    public record Request(Action action, int selectedIndex) implements CustomPacketPayload {
+        public static final Type<Request> TYPE = new Type<>(WilderNature.identifier("bounty_request"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, Request> CODEC = StreamCodec.of(
+            (buffer, value) -> { buffer.writeEnum(value.action); buffer.writeInt(value.selectedIndex); },
+            buffer -> new Request(buffer.readEnum(Action.class), buffer.readInt()));
+        @Override public Type<Request> type() { return TYPE; }
+    }
+
+    public record Notes(int open, int total) implements CustomPacketPayload {
+        public static final Type<Notes> TYPE = new Type<>(WilderNature.identifier("bounty_board_notes"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, Notes> CODEC = StreamCodec.of(
+            (buffer, value) -> { buffer.writeInt(value.open); buffer.writeInt(value.total); },
+            buffer -> new Notes(buffer.readInt(), buffer.readInt()));
+        @Override public Type<Notes> type() { return TYPE; }
+    }
+
+    public record Sync(int selected, boolean hasActive, int activeIndex, int progress, int required,
+            boolean completed, boolean restoreAvailable, boolean rewardsUnlocked, List<UUID> abandoned) implements CustomPacketPayload {
+        public static final Type<Sync> TYPE = new Type<>(WilderNature.identifier("bounty_sync"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, Sync> CODEC = StreamCodec.of(Sync::write, Sync::read);
+        public Sync { abandoned = List.copyOf(abandoned); }
+        @Override public Type<Sync> type() { return TYPE; }
+        private static void write(RegistryFriendlyByteBuf buffer, Sync value) {
+            buffer.writeInt(value.selected);
+            buffer.writeBoolean(value.hasActive);
+            buffer.writeInt(value.activeIndex);
+            buffer.writeInt(value.progress);
+            buffer.writeInt(value.required);
+            buffer.writeBoolean(value.completed);
+            buffer.writeBoolean(value.restoreAvailable);
+            buffer.writeBoolean(value.rewardsUnlocked);
+            buffer.writeVarInt(value.abandoned.size());
+            value.abandoned.forEach(buffer::writeUUID);
+        }
+        private static Sync read(RegistryFriendlyByteBuf buffer) {
+            int selected = buffer.readInt();
+            boolean hasActive = buffer.readBoolean();
+            int activeIndex = buffer.readInt();
+            int progress = buffer.readInt();
+            int required = buffer.readInt();
+            boolean completed = buffer.readBoolean();
+            boolean restore = buffer.readBoolean();
+            boolean unlocked = buffer.readBoolean();
+            int count = buffer.readVarInt();
+            if (count < 0 || count > 4096) throw new IllegalArgumentException("Invalid abandoned bounty count");
+            List<UUID> abandoned = new ArrayList<>(count);
+            for (int i = 0; i < count; i++) abandoned.add(buffer.readUUID());
+            return new Sync(selected, hasActive, activeIndex, progress, required, completed, restore, unlocked, abandoned);
+        }
+    }
+
     public static void init() {
         if (Platform.getEnvironment() == Env.SERVER) {
-            NetworkManager.registerS2CPayloadType(NOTES);
-            NetworkManager.registerS2CPayloadType(SYNC);
+            NetworkManager.registerS2CPayloadType(Notes.TYPE, Notes.CODEC);
+            NetworkManager.registerS2CPayloadType(Sync.TYPE, Sync.CODEC);
         }
-
-        NetworkManager.registerReceiver(NetworkManager.c2s(), ACCEPT, (buffer, context) -> context.queue(() -> {
-            ServerPlayer serverPlayer = (ServerPlayer) context.getPlayer();
-            if (serverPlayer.containerMenu instanceof BountyBoardMenu menu) {
-                menu.acceptSelectedBounty();
-                sendSync(serverPlayer, menu);
-                sendNotes(serverPlayer, true);
-            }
-        }));
-
-        NetworkManager.registerReceiver(NetworkManager.c2s(), ABANDON, (buffer, context) -> context.queue(() -> {
-            ServerPlayer serverPlayer = (ServerPlayer) context.getPlayer();
-            if (serverPlayer.containerMenu instanceof BountyBoardMenu menu) {
-                menu.abandonActiveBounty(serverPlayer);
-                menu.broadcastChanges();
-                sendSync(serverPlayer, menu);
-                sendNotes(serverPlayer, true);
-            }
-        }));
-
-        NetworkManager.registerReceiver(NetworkManager.c2s(), CLAIM, (buffer, context) -> context.queue(() -> {
-            ServerPlayer serverPlayer = (ServerPlayer) context.getPlayer();
-            if (serverPlayer.containerMenu instanceof BountyBoardMenu menu) {
-                menu.claimActiveBounty();
-                sendSync(serverPlayer, menu);
-                sendNotes(serverPlayer, true);
-            }
-        }));
-
-        NetworkManager.registerReceiver(NetworkManager.c2s(), SELECT, (buffer, context) -> {
-            int selectedIndex = buffer.readInt();
-            context.queue(() -> {
-                ServerPlayer serverPlayer = (ServerPlayer) context.getPlayer();
-                if (serverPlayer.containerMenu instanceof BountyBoardMenu menu) {
-                    menu.setSelectedBountyIndex(selectedIndex);
-                    menu.broadcastChanges();
-                    sendSync(serverPlayer, menu);
-                    sendNotes(serverPlayer, true);
+        NetworkManager.registerReceiver(NetworkManager.c2s(), Request.TYPE, Request.CODEC, (request, context) -> context.queue(() -> {
+            ServerPlayer player = (ServerPlayer) context.getPlayer();
+            if (!(player.containerMenu instanceof BountyBoardMenu menu)) return;
+            switch (request.action()) {
+                case ACCEPT -> menu.acceptSelectedBounty();
+                case ABANDON -> menu.abandonActiveBounty(player);
+                case CLAIM -> menu.claimActiveBounty();
+                case SELECT -> {
+                    if (request.selectedIndex() < 0 || request.selectedIndex() >= menu.getVisibleBounties().size()) return;
+                    menu.setSelectedBountyIndex(request.selectedIndex());
                 }
-            });
-        });
-
+            }
+            menu.broadcastChanges();
+            sendSync(player, menu);
+            sendNotes(player, true);
+        }));
     }
 
     public static void initClient() {
-        NetworkManager.registerReceiver(NetworkManager.s2c(), NOTES, (buffer, context) -> {
-            int openBounties = buffer.readInt();
-            int totalBounties = buffer.readInt();
-            context.queue(() -> ClientBountyBoardNotes.set(openBounties, totalBounties));
-        });
-
-        NetworkManager.registerReceiver(NetworkManager.s2c(), SYNC, (buffer, context) -> {
-            int selectedBountyIndex = buffer.readInt();
-            boolean hasActiveBounty = buffer.readBoolean();
-            int activeBountyIndex = buffer.readInt();
-            int activeProgress = buffer.readInt();
-            int activeRequiredKills = buffer.readInt();
-            boolean activeCompleted = buffer.readBoolean();
-            boolean restoreContractAvailable = buffer.readBoolean();
-            boolean rewardsUnlocked = buffer.readBoolean();
-            int abandonedCount = buffer.readInt();
-            List<UUID> abandonedBountyIds = new ArrayList<>(abandonedCount);
-
-            for (int index = 0; index < abandonedCount; index++) {
-                abandonedBountyIds.add(buffer.readUUID());
+        NetworkManager.registerReceiver(NetworkManager.s2c(), Notes.TYPE, Notes.CODEC, (notes, context) ->
+            context.queue(() -> ClientBountyBoardNotes.set(notes.open(), notes.total())));
+        NetworkManager.registerReceiver(NetworkManager.s2c(), Sync.TYPE, Sync.CODEC, (sync, context) -> context.queue(() -> {
+            var player = Minecraft.getInstance().player;
+            if (player != null && player.containerMenu instanceof BountyBoardMenu menu) {
+                menu.applySyncFromServer(sync.selected(), sync.hasActive(), sync.activeIndex(), sync.progress(),
+                    sync.required(), sync.completed(), sync.restoreAvailable(), sync.rewardsUnlocked(), sync.abandoned());
             }
-
-            context.queue(() -> {
-                if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.containerMenu instanceof BountyBoardMenu menu) {
-                    menu.applySyncFromServer(
-                            selectedBountyIndex,
-                            hasActiveBounty,
-                            activeBountyIndex,
-                            activeProgress,
-                            activeRequiredKills,
-                            activeCompleted,
-                            restoreContractAvailable,
-                            rewardsUnlocked,
-                            abandonedBountyIds
-                    );
-                }
-            });
-        });
+        }));
     }
 
-    public static void sendAccept() {
-        NetworkManager.sendToServer(ACCEPT, createClientBuffer());
+    public static void sendAccept() { NetworkManager.sendToServer(new Request(Action.ACCEPT, 0)); }
+    public static void sendAbandon() { NetworkManager.sendToServer(new Request(Action.ABANDON, 0)); }
+    public static void sendSelect(int selectedIndex) { NetworkManager.sendToServer(new Request(Action.SELECT, selectedIndex)); }
+
+    public static void sendSync(ServerPlayer player, BountyBoardMenu menu) {
+        sendSync(player, menu.getSelectedBountyIndex(), menu.hasActiveBounty(),
+            menu.getActiveBounty().map(bounty -> menu.getVisibleBounties().indexOf(bounty)).orElse(-1),
+            menu.getActiveProgress(), menu.getActiveRequiredKills(), menu.hasCompletedActiveBounty(),
+            menu.hasRestoreContractAvailable(), menu.areRewardSlotsUnlocked(), new ArrayList<>(menu.getAbandonedBountyIds()));
     }
 
-    public static void sendAbandon() {
-        NetworkManager.sendToServer(ABANDON, createClientBuffer());
-    }
-
-    public static void sendSelect(int selectedIndex) {
-        RegistryFriendlyByteBuf buffer = createClientBuffer();
-        buffer.writeInt(selectedIndex);
-        NetworkManager.sendToServer(SELECT, buffer);
-    }
-
-    public static void sendSync(ServerPlayer serverPlayer, BountyBoardMenu menu) {
-        sendSync(
-                serverPlayer,
-                menu.getSelectedBountyIndex(),
-                menu.hasActiveBounty(),
-                menu.getActiveBounty().map(activeBounty -> menu.getVisibleBounties().indexOf(activeBounty)).orElse(-1),
-                menu.getActiveProgress(),
-                menu.getActiveRequiredKills(),
-                menu.hasCompletedActiveBounty(),
-                menu.hasRestoreContractAvailable(),
-                menu.areRewardSlotsUnlocked(),
-                new ArrayList<>(menu.getAbandonedBountyIds())
-        );
-    }
-
-    public static void sendSync(ServerPlayer serverPlayer, int selectedBountyIndex, boolean hasActiveBounty, int activeBountyIndex, int activeProgress, int activeRequiredKills, boolean activeCompleted, boolean restoreContractAvailable, boolean rewardsUnlocked, List<UUID> abandonedBountyIds) {
-        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), serverPlayer.registryAccess());
-        buffer.writeInt(selectedBountyIndex);
-        buffer.writeBoolean(hasActiveBounty);
-        buffer.writeInt(activeBountyIndex);
-        buffer.writeInt(activeProgress);
-        buffer.writeInt(activeRequiredKills);
-        buffer.writeBoolean(activeCompleted);
-        buffer.writeBoolean(restoreContractAvailable);
-        buffer.writeBoolean(rewardsUnlocked);
-        buffer.writeInt(abandonedBountyIds.size());
-
-        for (UUID abandonedBountyId : abandonedBountyIds) {
-            buffer.writeUUID(abandonedBountyId);
-        }
-
-        NetworkManager.sendToPlayer(serverPlayer, SYNC, buffer);
+    public static void sendSync(ServerPlayer player, int selected, boolean hasActive, int activeIndex,
+            int progress, int required, boolean completed, boolean restoreAvailable, boolean rewardsUnlocked, List<UUID> abandoned) {
+        NetworkManager.sendToPlayer(player, new Sync(selected, hasActive, activeIndex, progress, required, completed,
+            restoreAvailable, rewardsUnlocked, abandoned));
     }
 
     public static void tickNotes(ServerPlayer serverPlayer) {
@@ -179,7 +131,7 @@ public final class BountyBoardNetworking {
     }
 
     public static void sendNotes(ServerPlayer serverPlayer, boolean force) {
-        ServerLevel serverLevel = serverPlayer.serverLevel();
+        ServerLevel serverLevel = serverPlayer.level();
         List<BountyDefinition> dailyBounties = BountyManager.getDailyBounties(serverLevel);
         PlayerBountyData playerBountyData = BountyBoardSavedData.get(serverLevel).getPlayerBountyData(serverPlayer.getUUID());
         BountyDefinition activeBounty = playerBountyData.hasActiveBounty() ? playerBountyData.getActiveBounty() : null;
@@ -198,27 +150,12 @@ public final class BountyBoardNetworking {
             return;
         }
 
-        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), serverPlayer.registryAccess());
-        buffer.writeInt(openBounties);
-        buffer.writeInt(totalBounties);
-        NetworkManager.sendToPlayer(serverPlayer, NOTES, buffer);
+        NetworkManager.sendToPlayer(serverPlayer, new Notes(openBounties, totalBounties));
     }
 
     public static void forgetNotes(ServerPlayer serverPlayer) {
         SENT_NOTES.remove(serverPlayer.getUUID());
     }
 
-    private static RegistryFriendlyByteBuf createClientBuffer() {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.getConnection() != null) {
-            return new RegistryFriendlyByteBuf(Unpooled.buffer(), minecraft.getConnection().registryAccess());
-        }
-        if (minecraft.level != null) {
-            return new RegistryFriendlyByteBuf(Unpooled.buffer(), minecraft.level.registryAccess());
-        }
-        throw new IllegalStateException("Missing client registry access");
-    }
-
-    private BountyBoardNetworking() {
-    }
+    private BountyBoardNetworking() {}
 }

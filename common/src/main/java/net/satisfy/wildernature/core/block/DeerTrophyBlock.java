@@ -1,6 +1,6 @@
 package net.satisfy.wildernature.core.block;
 
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -60,7 +60,7 @@ public class DeerTrophyBlock extends WallDecorationBlock {
 
     @Override
     public @NotNull InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
-        if (world.isClientSide) {
+        if (world.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
 

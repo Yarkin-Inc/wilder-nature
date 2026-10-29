@@ -6,23 +6,21 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "functions": [
+          "name": "minecraft:mutton",
+          "modifier": [
             {
-              "conditions": [
-                {
-                  "condition": "minecraft:entity_properties",
-                  "entity": "this",
-                  "predicate": {
-                    "flags": {
-                      "is_on_fire": true
-                    }
+              "type": "minecraft:furnace_smelt",
+              "condition": {
+                "entity": "this",
+                "predicate": {
+                  "minecraft:flags": {
+                    "is_on_fire": true
                   }
-                }
-              ],
-              "function": "minecraft:furnace_smelt"
+                },
+                "type": "minecraft:entity_properties"
+              }
             }
-          ],
-          "name": "minecraft:mutton"
+          ]
         }
       ],
       "rolls": 1.0

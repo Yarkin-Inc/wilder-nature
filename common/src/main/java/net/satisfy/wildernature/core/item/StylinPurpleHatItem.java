@@ -1,26 +1,31 @@
 package net.satisfy.wildernature.core.item;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.ArmorItem;
-import net.minecraft.world.item.ArmorMaterial;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.equipment.ArmorType;
+import net.minecraft.world.item.equipment.ArmorMaterial;
 import org.jetbrains.annotations.NotNull;
 
-public class StylinPurpleHatItem extends ArmorItem {
-    private final ResourceLocation hatTexture;
+public class StylinPurpleHatItem extends Item {
+    private final Identifier hatTexture;
 
-    public StylinPurpleHatItem(ArmorMaterial armorMaterial, Type type, Properties properties, ResourceLocation hatTexture) {
-        super(BuiltInRegistries.ARMOR_MATERIAL.wrapAsHolder(armorMaterial), type, properties);
+    public StylinPurpleHatItem(ArmorMaterial armorMaterial, ArmorType type, Properties properties, Identifier hatTexture) {
+        super(properties.durability(type.getDurability(armorMaterial.durability()))
+                .attributes(armorMaterial.createAttributes(type))
+                .component(net.minecraft.core.component.DataComponents.EQUIPPABLE,
+                        net.minecraft.world.item.equipment.Equippable.builder(type.getSlot())
+                                .setEquipSound(armorMaterial.equipSound()).build())
+                .repairable(armorMaterial.repairIngredient()));
         this.hatTexture = hatTexture;
     }
 
-    public ResourceLocation getHatTexture() {
+    public Identifier getHatTexture() {
         return hatTexture;
     }
 
-    @Override
     public @NotNull EquipmentSlot getEquipmentSlot() {
-        return this.type.getSlot();
+        return EquipmentSlot.HEAD;
     }
 }

@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.neutral;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -15,7 +17,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
-import net.minecraft.world.entity.animal.Chicken;
+import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -31,7 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TurkeyEntity extends Chicken {
-    private static final Ingredient FOOD_ITEMS = Ingredient.of(TagsRegistry.TURKEY_FOOD);
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOOD_ITEMS = (stack -> stack.is(TagsRegistry.TURKEY_FOOD));
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(TurkeyEntity.class, EntityDataSerializers.BOOLEAN);
     public static final int TURKEY_ATTACK_TICKS = (int) (1.6F * 20) + 2;
 
@@ -54,7 +56,7 @@ public class TurkeyEntity extends Chicken {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MAX_HEALTH, 6.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.24D)
                 .add(Attributes.ATTACK_DAMAGE, 1.25D);
@@ -89,8 +91,8 @@ public class TurkeyEntity extends Chicken {
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float damageAmount) {
-        boolean wasHurt = super.hurt(damageSource, damageAmount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float damageAmount) {
+        boolean wasHurt = super.hurtServer(serverLevel, damageSource, damageAmount);
 
         if (wasHurt && !this.level().isClientSide()) {
             Entity sourceEntity = damageSource.getEntity();
@@ -103,8 +105,8 @@ public class TurkeyEntity extends Chicken {
     }
 
     @Override
-    public boolean doHurtTarget(Entity targetEntity) {
-        boolean success = super.doHurtTarget(targetEntity);
+    public boolean doHurtTarget(net.minecraft.server.level.ServerLevel serverLevel, Entity targetEntity) {
+        boolean success = super.doHurtTarget(serverLevel, targetEntity);
 
         if (success) {
             this.attackAnimationTicks = TURKEY_ATTACK_TICKS;
@@ -133,15 +135,15 @@ public class TurkeyEntity extends Chicken {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
+    public void addAdditionalSaveData(ValueOutput compound) {
         super.addAdditionalSaveData(compound);
         compound.putInt("AttackAnimationTicks", this.attackAnimationTicks);
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
+    public void readAdditionalSaveData(ValueInput compound) {
         super.readAdditionalSaveData(compound);
-        this.attackAnimationTicks = compound.getInt("AttackAnimationTicks");
+        this.attackAnimationTicks = compound.getIntOr("AttackAnimationTicks", 0);
         this.setAttacking(this.attackAnimationTicks > 0);
     }
 
@@ -169,7 +171,7 @@ public class TurkeyEntity extends Chicken {
 
         if (!this.level().isClientSide() && this.isAlive() && !this.isBaby() && --this.turkeyEggTime <= 0) {
             this.playSound(SoundEvents.CHICKEN_EGG, 1.0F, (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
-            this.spawnAtLocation(ObjectRegistry.TURKEY_EGG.get());
+            this.spawnAtLocation((net.minecraft.server.level.ServerLevel) level(), ObjectRegistry.TURKEY_EGG.get());
             this.turkeyEggTime = this.random.nextInt(6000) + 6000;
         }
     }
@@ -199,13 +201,13 @@ public class TurkeyEntity extends Chicken {
 
     @Override
     protected void playStepSound(BlockPos blockPos, BlockState blockState) {
-        this.playSound(SoundEvents.CHICKEN_STEP, 0.15F, 1.0F);
+        this.playSound(SoundEvents.CHICKEN_STEP.value(), 0.15F, 1.0F);
     }
 
     @Override
     @Nullable
     public TurkeyEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.TURKEY.get().create(serverLevel);
+        return EntityTypeRegistry.TURKEY.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -214,8 +216,8 @@ public class TurkeyEntity extends Chicken {
     }
 
     @Override
-    protected int getBaseExperienceReward() {
-        return this.isPelicanJockey() ? 12 : super.getBaseExperienceReward();
+    protected int getBaseExperienceReward(ServerLevel serverLevel) {
+        return this.isPelicanJockey() ? 12 : super.getBaseExperienceReward(serverLevel);
     }
 
     @Override

@@ -5,32 +5,29 @@ import com.mojang.math.Axis;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.satisfy.wildernature.client.model.entity.model.TermiteModel;
-import net.satisfy.wildernature.core.entity.animal.passive.TermiteEntity;
+import net.satisfy.wildernature.client.render.state.TermiteRenderState;
 
 @Environment(EnvType.CLIENT)
-public class TermiteHeldItemLayer extends RenderLayer<TermiteEntity, TermiteModel<TermiteEntity>> {
-    private final ItemInHandRenderer itemInHandRenderer;
-
-    public TermiteHeldItemLayer(RenderLayerParent<TermiteEntity, TermiteModel<TermiteEntity>> renderer, ItemInHandRenderer itemInHandRenderer) {
+public class TermiteHeldItemLayer extends RenderLayer<TermiteRenderState, TermiteModel<TermiteRenderState>> {
+public TermiteHeldItemLayer(RenderLayerParent<TermiteRenderState, TermiteModel<TermiteRenderState>> renderer) {
         super(renderer);
-        this.itemInHandRenderer = itemInHandRenderer;
     }
 
     @Override
-    public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, TermiteEntity entity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
-        ItemStack itemStack = entity.getMainHandItem();
-        if (itemStack.isEmpty()) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector buffer, int packedLight, TermiteRenderState entity, float netHeadYaw, float headPitch) {
+        this.getParentModel().setupAnim(entity);
+        if (entity.heldItem.isEmpty()) {
             return;
         }
 
-        ModelPart basePart = this.getParentModel().root();
+        ModelPart basePart = this.getParentModel().root().getChild("base");
         ModelPart torsoPart = basePart.getChild("torso");
 
         poseStack.pushPose();
@@ -38,10 +35,10 @@ public class TermiteHeldItemLayer extends RenderLayer<TermiteEntity, TermiteMode
         torsoPart.translateAndRotate(poseStack);
 
         poseStack.translate(0.0F, -0.25F, -0.15F);
-        poseStack.mulPose(Axis.ZP.rotationDegrees(180.0F));
+        poseStack.rotate(Axis.ZP.rotationDegrees(180.0F));
         poseStack.scale(0.6F, 0.6F, 0.6F);
 
-        this.itemInHandRenderer.renderItem(entity, itemStack, ItemDisplayContext.FIXED, false, poseStack, buffer, packedLight);
+        entity.heldItem.submit(poseStack, buffer, packedLight, OverlayTexture.NO_OVERLAY, entity.outlineColor);
         poseStack.popPose();
     }
 }

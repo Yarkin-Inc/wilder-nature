@@ -296,7 +296,7 @@ public class BisonGoals {
 
             if (distanceToTarget <= 6.25D) {
                 System.out.println("BISON CHARGE: attempting hit");
-                boolean hitSuccessful = this.bison.doHurtTarget(this.targetPlayer);
+                boolean hitSuccessful = this.bison.doHurtTarget((net.minecraft.server.level.ServerLevel) this.bison.level(), this.targetPlayer);
                 System.out.println("BISON CHARGE HIT RESULT: " + hitSuccessful);
                 this.bison.stopCharge();
             }

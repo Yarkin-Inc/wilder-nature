@@ -11,16 +11,14 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.ShovelItem;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -67,11 +65,11 @@ public class RottenLogBlock extends RotatedPillarBlock implements EntityBlock {
     }
 
     @Override
-    protected @NotNull ItemInteractionResult useItemOn(ItemStack held, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected @NotNull InteractionResult useItemOn(ItemStack held, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         Stage stage = state.getValue(STAGE);
         Direction.Axis axis = state.getValue(AXIS);
 
-        if (stage == Stage.INFESTED && held.getItem() instanceof ShovelItem) {
+        if (stage == Stage.INFESTED && held.is(net.minecraft.tags.ItemTags.SHOVELS)) {
             if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
                 ReleaseData releaseData = releaseInfestedCluster(serverLevel, pos, false);
                 level.playSound(null, pos, SoundEvents.GRAVEL_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
@@ -87,7 +85,7 @@ public class RottenLogBlock extends RotatedPillarBlock implements EntityBlock {
                     TermiteMoundBlockEntity.releaseInfestationId(serverLevel, releaseData.moundPos(), releaseData.infestationId());
                 }
             }
-            return ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return InteractionResult.SUCCESS;
         }
 
         if (stage == Stage.HOLLOW && axis == Direction.Axis.Y && held.is(Items.DIRT)) {
@@ -99,22 +97,22 @@ public class RottenLogBlock extends RotatedPillarBlock implements EntityBlock {
                     held.shrink(1);
                 }
             }
-            return ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return InteractionResult.SUCCESS;
         }
 
-        if (stage == Stage.SOIL && axis == Direction.Axis.Y && held.getItem() instanceof HoeItem) {
+        if (stage == Stage.SOIL && axis == Direction.Axis.Y && held.is(net.minecraft.tags.ItemTags.HOES)) {
             if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
                 int moisture = hasNearbyWater(level, pos) || level.isRainingAt(pos.above()) ? 7 : 0;
                 level.setBlock(pos, state.setValue(STAGE, Stage.FARMLAND).setValue(MOISTURE, moisture), Block.UPDATE_ALL);
-                level.playSound(null, pos, SoundEvents.HOE_TILL, SoundSource.BLOCKS, 1.0F, 1.0F);
+                level.playSound(null, pos, SoundEvents.HOE_TILL.value(), SoundSource.BLOCKS, 1.0F, 1.0F);
                 spawnTopBlockParticles(serverLevel, pos, Blocks.DIRT.defaultBlockState());
                 EquipmentSlot equipmentSlot = hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
                 held.hurtAndBreak(1, player, equipmentSlot);
             }
-            return ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return InteractionResult.SUCCESS;
         }
 
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     @Override
@@ -184,9 +182,9 @@ public class RottenLogBlock extends RotatedPillarBlock implements EntityBlock {
     }
 
     @Override
-    public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+    public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity, net.minecraft.world.entity.InsideBlockEffectApplier effects, boolean wasInside) {
         if (state.getValue(STAGE) != Stage.FARMLAND) {
-            super.entityInside(state, level, pos, entity);
+            super.entityInside(state, level, pos, entity, effects, wasInside);
         }
     }
 
@@ -295,7 +293,7 @@ public class RottenLogBlock extends RotatedPillarBlock implements EntityBlock {
         }
 
         for (int termiteIndex = 0; termiteIndex < termiteCount; termiteIndex++) {
-            TermiteEntity termite = EntityTypeRegistry.TERMITE.get().create(level);
+            TermiteEntity termite = EntityTypeRegistry.TERMITE.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
             if (termite == null) {
                 continue;
             }
@@ -304,10 +302,10 @@ public class RottenLogBlock extends RotatedPillarBlock implements EntityBlock {
             double offsetX = (level.getRandom().nextDouble() - 0.5D) * 0.4D;
             double offsetZ = (level.getRandom().nextDouble() - 0.5D) * 0.4D;
 
-            termite.moveTo(spawnPos.getX() + 0.5D + offsetX, spawnPos.getY() + 0.1D, spawnPos.getZ() + 0.5D + offsetZ, level.getRandom().nextFloat() * 360.0F, 0.0F);
+            termite.snapTo(spawnPos.getX() + 0.5D + offsetX, spawnPos.getY() + 0.1D, spawnPos.getZ() + 0.5D + offsetZ, level.getRandom().nextFloat() * 360.0F, 0.0F);
             termite.setMoundPos(moundPos);
             termite.setReturningToMound(moundPos != null);
-            termite.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos), MobSpawnType.TRIGGERED, null);
+            termite.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos), EntitySpawnReason.TRIGGERED, null);
 
             if (level.addFreshEntity(termite) && moundPos != null) {
                 TermiteMoundBlockEntity.registerReleasedTermite(level, moundPos, termite.getUUID());

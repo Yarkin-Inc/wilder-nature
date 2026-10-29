@@ -3,12 +3,12 @@ package net.satisfy.wildernature.core.entity.ai.goal.animal;
 import net.minecraft.core.BlockPos;
 import net.satisfy.wildernature.platform.PlatformHelper;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -23,7 +23,7 @@ public class BoarRootingGoal extends Goal {
     private static final int FAILURE_COOLDOWN = 80;
     private static final int REPATH_COOLDOWN = 10;
     private static final double MOVE_SPEED = 1.25D;
-    private static final AttributeModifier ROOTING_IMMOBILIZE_MODIFIER = new AttributeModifier(ResourceLocation.parse("wildernature:boar_rooting_immobilize"), -1000.0D, AttributeModifier.Operation.ADD_VALUE);
+    private static final AttributeModifier ROOTING_IMMOBILIZE_MODIFIER = new AttributeModifier(Identifier.parse("wildernature:boar_rooting_immobilize"), -1000.0D, AttributeModifier.Operation.ADD_VALUE);
     private final BoarEntity boar;
     private BlockPos targetPosition;
     private int preparationTicks;
@@ -154,7 +154,7 @@ public class BoarRootingGoal extends Goal {
 
         this.boar.level().levelEvent(2001, pos, Block.getId(state));
 
-        if (!this.boar.level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) return;
+        if (!((net.minecraft.server.level.ServerLevel) this.boar.level()).getGameRules().get(GameRules.MOB_GRIEFING)) return;
 
         BlockState replacement = Blocks.COARSE_DIRT.defaultBlockState();
         float lootChance = 1.0F;
@@ -187,7 +187,7 @@ public class BoarRootingGoal extends Goal {
     }
 
     private BlockState getFertilized() {
-        return BuiltInRegistries.BLOCK.getOptional(ResourceLocation.parse("farm_and_charm:fertilized_soil"))
+        return BuiltInRegistries.BLOCK.getOptional(Identifier.parse("farm_and_charm:fertilized_soil"))
                 .filter(block -> block != Blocks.AIR)
                 .map(Block::defaultBlockState)
                 .orElse(null);

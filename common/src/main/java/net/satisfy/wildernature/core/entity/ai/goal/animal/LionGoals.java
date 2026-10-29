@@ -79,6 +79,12 @@ public class LionGoals {
         }
 
         @Override
+        public boolean requiresUpdateEveryTick() {
+            // The warning timer advances every entity tick; do not skip its final tick.
+            return true;
+        }
+
+        @Override
         public boolean canUse() {
             if (this.lion.isBaby() || this.lion.isSleeping() || this.lion.isBusy() || this.lion.getTarget() != null) {
                 return false;
@@ -229,13 +235,13 @@ public class LionGoals {
         private final LionEntity lion;
 
         public LionHuntGoal(LionEntity lion) {
-            super(lion, Animal.class, 10, true, false, target -> target != null && target.getType().is(TagsRegistry.LION_TARGETS));
+            super(lion, Animal.class, 10, true, false, (target, targetLevel) -> target != null && target.is(TagsRegistry.LION_TARGETS));
             this.lion = lion;
         }
 
         @Override
         public boolean canUse() {
-            return !this.lion.isBaby() && !this.lion.isSleeping() && this.lion.level().isNight() && super.canUse();
+            return !this.lion.isBaby() && !this.lion.isSleeping() && this.lion.level().isDarkOutside() && super.canUse();
         }
     }
 

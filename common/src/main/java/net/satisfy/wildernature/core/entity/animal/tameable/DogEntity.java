@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.tameable;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -24,7 +26,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
-import net.minecraft.world.entity.monster.Skeleton;
+import net.minecraft.world.entity.monster.skeleton.Skeleton;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -118,13 +120,13 @@ public class DogEntity extends TamableAnimal {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, MOVEMENT_SPEED).add(Attributes.MAX_HEALTH, MAX_HEALTH).add(Attributes.ATTACK_DAMAGE, ATTACK_DAMAGE);
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes().add(Attributes.MOVEMENT_SPEED, MOVEMENT_SPEED).add(Attributes.MAX_HEALTH, MAX_HEALTH).add(Attributes.ATTACK_DAMAGE, ATTACK_DAMAGE);
     }
 
     @Nullable
     @Override
     public DogEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        DogEntity babyDog = EntityTypeRegistry.DOG.get().create(serverLevel);
+        DogEntity babyDog = EntityTypeRegistry.DOG.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
         if (babyDog == null) {
             return null;
         }
@@ -148,7 +150,7 @@ public class DogEntity extends TamableAnimal {
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficultyInstance, MobSpawnType mobSpawnType, @Nullable SpawnGroupData spawnGroupData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficultyInstance, EntitySpawnReason mobSpawnType, @Nullable SpawnGroupData spawnGroupData) {
         SpawnGroupData finalizedSpawnGroupData = super.finalizeSpawn(serverLevelAccessor, difficultyInstance, mobSpawnType, spawnGroupData);
         this.setVariant(this.random.nextBoolean() ? 0 : 1);
         return finalizedSpawnGroupData;
@@ -234,7 +236,7 @@ public class DogEntity extends TamableAnimal {
         });
         this.goalSelector.addGoal(16, new DogGoals.GoAfterCatGoal(this));
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Skeleton.class, true, skeleton -> !this.isOrderedToSit() && !this.isResting() && !this.isDigging()));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Skeleton.class, true, (skeleton, targetLevel) -> !this.isOrderedToSit() && !this.isResting() && !this.isDigging()));
     }
 
     @Override
@@ -353,7 +355,7 @@ public class DogEntity extends TamableAnimal {
             return;
         }
 
-        if (this.level().isNight()) {
+        if (this.level().isDarkOutside()) {
             if (this.random.nextInt(80) == 0) {
                 this.startSleeping();
             }
@@ -381,7 +383,7 @@ public class DogEntity extends TamableAnimal {
         if (this.isPanicking() || this.getTarget() != null || this.hurtTime > 0) {
             return false;
         }
-        if (this.isInWaterOrBubble()) {
+        if (this.isInWater()) {
             return false;
         }
         if (!this.onGround()) {
@@ -409,7 +411,7 @@ public class DogEntity extends TamableAnimal {
                 || this.isPanicking()
                 || this.getTarget() != null
                 || this.hurtTime > 0
-                || this.isInWaterOrBubble()
+                || this.isInWater()
                 || !this.onGround()
                 || !this.getNavigation().isDone()
                 || this.getDeltaMovement().horizontalDistanceSqr() > 0.01D
@@ -683,7 +685,7 @@ public class DogEntity extends TamableAnimal {
         for (int slotIndex = 0; slotIndex < this.dogInventory.size(); slotIndex++) {
             ItemStack itemStack = this.dogInventory.get(slotIndex);
             if (!itemStack.isEmpty()) {
-                this.spawnAtLocation(itemStack.copy());
+                this.spawnAtLocation((net.minecraft.server.level.ServerLevel) level(), itemStack.copy());
                 this.dogInventory.set(slotIndex, ItemStack.EMPTY);
             }
         }
@@ -834,7 +836,7 @@ public class DogEntity extends TamableAnimal {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
+    public void addAdditionalSaveData(ValueOutput compound) {
         super.addAdditionalSaveData(compound);
         compound.putBoolean("Sitting", this.isOrderedToSit());
         compound.putBoolean("Lying", this.isLying());
@@ -857,7 +859,7 @@ public class DogEntity extends TamableAnimal {
         compound.putBoolean("ShouldReturnToSit", this.shouldReturnToSit);
         compound.putInt("Variant", this.getVariant());
         compound.putInt("BurrowStoredBones", this.burrowStoredBones);
-        ContainerHelper.saveAllItems(compound, this.dogInventory, this.registryAccess());
+        ContainerHelper.saveAllItems(compound, this.dogInventory);
 
         if (this.returnSitPos != null) {
             compound.putInt("ReturnSitPosX", this.returnSitPos.getX());
@@ -879,47 +881,47 @@ public class DogEntity extends TamableAnimal {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
+    public void readAdditionalSaveData(ValueInput compound) {
         super.readAdditionalSaveData(compound);
-        boolean sitting = compound.getBoolean("Sitting");
+        boolean sitting = compound.getBooleanOr("Sitting", false);
         this.setOrderedToSit(sitting);
         this.entityData.set(SITTING, sitting);
-        this.setLying(compound.getBoolean("Lying"));
-        this.setSleeping(compound.getBoolean("Sleeping"));
-        this.setHowling(compound.getBoolean("Howling"));
-        this.setFetching(compound.getBoolean("Fetching"));
-        this.setDigging(compound.getBoolean("Digging"));
-        this.attackAnimationTicks = compound.getInt("AttackAnimationTicks");
-        this.restTicks = compound.getInt("RestTicks");
-        this.restCooldownTicks = compound.getInt("RestCooldownTicks");
-        this.restAttemptTicks = compound.getInt("RestAttemptTicks");
-        this.jobCooldownTicks = compound.getInt("JobCooldownTicks");
-        this.skeletonDeliveryTicks = compound.getInt("SkeletonDeliveryTicks");
-        this.skeletonDeliveryCooldownTicks = compound.getInt("SkeletonDeliveryCooldownTicks");
-        this.boneSearchCooldownTicks = compound.getInt("BoneSearchCooldownTicks");
-        this.burrowSearchCooldownTicks = compound.getInt("BurrowSearchCooldownTicks");
-        this.creeperSearchCooldownTicks = compound.getInt("CreeperSearchCooldownTicks");
-        this.deliverSkeletonLootToOwner = compound.getBoolean("DeliverSkeletonLootToOwner");
-        this.skeletonKilledWithOwner = compound.getBoolean("SkeletonKilledWithOwner");
-        this.shouldReturnToSit = compound.getBoolean("ShouldReturnToSit");
-        this.setVariant(compound.getInt("Variant"));
-        this.burrowStoredBones = compound.getInt("BurrowStoredBones");
-        ContainerHelper.loadAllItems(compound, this.dogInventory, this.registryAccess());
+        this.setLying(compound.getBooleanOr("Lying", false));
+        this.setSleeping(compound.getBooleanOr("Sleeping", false));
+        this.setHowling(compound.getBooleanOr("Howling", false));
+        this.setFetching(compound.getBooleanOr("Fetching", false));
+        this.setDigging(compound.getBooleanOr("Digging", false));
+        this.attackAnimationTicks = compound.getIntOr("AttackAnimationTicks", 0);
+        this.restTicks = compound.getIntOr("RestTicks", 0);
+        this.restCooldownTicks = compound.getIntOr("RestCooldownTicks", 0);
+        this.restAttemptTicks = compound.getIntOr("RestAttemptTicks", 0);
+        this.jobCooldownTicks = compound.getIntOr("JobCooldownTicks", 0);
+        this.skeletonDeliveryTicks = compound.getIntOr("SkeletonDeliveryTicks", 0);
+        this.skeletonDeliveryCooldownTicks = compound.getIntOr("SkeletonDeliveryCooldownTicks", 0);
+        this.boneSearchCooldownTicks = compound.getIntOr("BoneSearchCooldownTicks", 0);
+        this.burrowSearchCooldownTicks = compound.getIntOr("BurrowSearchCooldownTicks", 0);
+        this.creeperSearchCooldownTicks = compound.getIntOr("CreeperSearchCooldownTicks", 0);
+        this.deliverSkeletonLootToOwner = compound.getBooleanOr("DeliverSkeletonLootToOwner", false);
+        this.skeletonKilledWithOwner = compound.getBooleanOr("SkeletonKilledWithOwner", false);
+        this.shouldReturnToSit = compound.getBooleanOr("ShouldReturnToSit", false);
+        this.setVariant(compound.getIntOr("Variant", 0));
+        this.burrowStoredBones = compound.getIntOr("BurrowStoredBones", 0);
+        ContainerHelper.loadAllItems(compound, this.dogInventory);
 
-        if (compound.contains("ReturnSitPosX") && compound.contains("ReturnSitPosY") && compound.contains("ReturnSitPosZ")) {
-            this.returnSitPos = new BlockPos(compound.getInt("ReturnSitPosX"), compound.getInt("ReturnSitPosY"), compound.getInt("ReturnSitPosZ"));
+        if (compound.read("ReturnSitPosX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compound.read("ReturnSitPosY", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compound.read("ReturnSitPosZ", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.returnSitPos = new BlockPos(compound.getIntOr("ReturnSitPosX", 0), compound.getIntOr("ReturnSitPosY", 0), compound.getIntOr("ReturnSitPosZ", 0));
         } else {
             this.returnSitPos = null;
         }
 
-        if (compound.contains("BurrowPosX") && compound.contains("BurrowPosY") && compound.contains("BurrowPosZ")) {
-            this.burrowPos = new BlockPos(compound.getInt("BurrowPosX"), compound.getInt("BurrowPosY"), compound.getInt("BurrowPosZ"));
+        if (compound.read("BurrowPosX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compound.read("BurrowPosY", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compound.read("BurrowPosZ", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.burrowPos = new BlockPos(compound.getIntOr("BurrowPosX", 0), compound.getIntOr("BurrowPosY", 0), compound.getIntOr("BurrowPosZ", 0));
         } else {
             this.burrowPos = null;
         }
 
-        if (compound.contains("SkeletonDeliveryOriginX") && compound.contains("SkeletonDeliveryOriginY") && compound.contains("SkeletonDeliveryOriginZ")) {
-            this.skeletonDeliveryOrigin = new BlockPos(compound.getInt("SkeletonDeliveryOriginX"), compound.getInt("SkeletonDeliveryOriginY"), compound.getInt("SkeletonDeliveryOriginZ"));
+        if (compound.read("SkeletonDeliveryOriginX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compound.read("SkeletonDeliveryOriginY", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compound.read("SkeletonDeliveryOriginZ", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.skeletonDeliveryOrigin = new BlockPos(compound.getIntOr("SkeletonDeliveryOriginX", 0), compound.getIntOr("SkeletonDeliveryOriginY", 0), compound.getIntOr("SkeletonDeliveryOriginZ", 0));
         } else {
             this.skeletonDeliveryOrigin = null;
         }
@@ -945,7 +947,7 @@ public class DogEntity extends TamableAnimal {
     @Override
     protected void updateWalkAnimation(float partialTick) {
         float walkSpeed = this.getPose() == Pose.STANDING && !this.isResting() && !this.isOrderedToSit() ? Math.min(partialTick * 6.0F, 1.0F) : 0.0F;
-        this.walkAnimation.update(walkSpeed, 0.2F);
+        this.walkAnimation.update(walkSpeed, 0.2F, 1.0F);
     }
 
     @Override
@@ -964,10 +966,10 @@ public class DogEntity extends TamableAnimal {
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float amount) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float amount) {
         this.clearRestState();
         this.setDigging(false);
-        return super.hurt(damageSource, amount);
+        return super.hurtServer(serverLevel, damageSource, amount);
     }
 
     @Override
@@ -979,8 +981,8 @@ public class DogEntity extends TamableAnimal {
     }
 
     @Override
-    public boolean doHurtTarget(Entity entity) {
-        boolean success = super.doHurtTarget(entity);
+    public boolean doHurtTarget(net.minecraft.server.level.ServerLevel serverLevel, Entity entity) {
+        boolean success = super.doHurtTarget(serverLevel, entity);
 
         if (success) {
             this.attackAnimationTicks = BITE_DURATION;
@@ -1056,7 +1058,7 @@ public class DogEntity extends TamableAnimal {
             return InteractionResult.CONSUME;
         }
 
-        this.level().playSound(null, this.blockPosition(), SoundEvents.WOLF_GROWL, SoundSource.NEUTRAL, 0.8F, 1.0F);
+        this.level().playSound(null, this.blockPosition(), SoundEvents.WOLF_SOUNDS.get(net.minecraft.world.entity.animal.wolf.WolfSoundVariants.SoundSet.CLASSIC).adultSounds().growlSound().value(), SoundSource.NEUTRAL, 0.8F, 1.0F);
         this.dropDogInventory();
         this.gameEvent(GameEvent.ENTITY_INTERACT, this);
         return InteractionResult.SUCCESS;

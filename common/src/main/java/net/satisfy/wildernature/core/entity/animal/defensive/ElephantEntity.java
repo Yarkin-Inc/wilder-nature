@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.defensive;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -30,7 +32,7 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
@@ -56,7 +58,7 @@ public class ElephantEntity extends Animal {
     private static final int FLAG_DRINKING = 0x00001000;
     private static final int FLAG_TRUMPETING = 0x00010000;
 
-    public static final Ingredient FOOD_ITEMS = Ingredient.of(TagsRegistry.ELEPHANT_FOOD);
+    public static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOOD_ITEMS = (stack -> stack.is(TagsRegistry.ELEPHANT_FOOD));
 
     public static final double HERD_RADIUS = 18.0D;
     public static final double HERD_RETURN_RADIUS = 10.0D;
@@ -140,7 +142,7 @@ public class ElephantEntity extends Animal {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MAX_HEALTH, 60.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.17D)
                 .add(Attributes.ATTACK_DAMAGE, 10.0D)
@@ -213,7 +215,7 @@ public class ElephantEntity extends Animal {
             }
         });
 
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, target -> target instanceof Player player && ElephantEntity.this.canTargetPlayer(player)) {
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, (target, targetLevel) -> target instanceof Player player && ElephantEntity.this.canTargetPlayer(player)) {
             @Override
             public boolean canUse() {
                 return !ElephantEntity.this.isBaby() && !ElephantEntity.this.isBusy() && super.canUse();
@@ -238,7 +240,7 @@ public class ElephantEntity extends Animal {
 
     @Nullable
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData spawnData) {
         SpawnGroupData output = super.finalizeSpawn(level, difficulty, reason, spawnData);
         this.herdCenter = this.blockPosition();
         this.throwTicks = 0;
@@ -264,7 +266,7 @@ public class ElephantEntity extends Animal {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt("ElephantFlags", this.entityData.get(DATA_FLAGS));
         tag.putInt("Trust", this.getTrust());
@@ -290,44 +292,44 @@ public class ElephantEntity extends Animal {
             tag.putInt("HerdCenterZ", this.herdCenter.getZ());
         }
         if (this.trustedPlayerUUID != null) {
-            tag.putUUID("TrustedPlayer", this.trustedPlayerUUID);
+            tag.store("TrustedPlayer", net.minecraft.core.UUIDUtil.CODEC, this.trustedPlayerUUID);
         }
         if (this.memorizedThreatUUID != null) {
-            tag.putUUID("MemorizedThreat", this.memorizedThreatUUID);
+            tag.store("MemorizedThreat", net.minecraft.core.UUIDUtil.CODEC, this.memorizedThreatUUID);
         }
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        this.entityData.set(DATA_FLAGS, tag.getInt("ElephantFlags"));
-        this.setTrust(tag.getInt("Trust"));
-        this.throwTicks = tag.getInt("ThrowTicks");
-        this.stampTicks = tag.getInt("StampTicks");
-        this.chargeWindupTicks = tag.getInt("ChargeWindupTicks");
-        this.chargeActiveTicks = tag.getInt("ChargeActiveTicks");
-        this.chargeRecoveryTicks = tag.getInt("ChargeRecoveryTicks");
-        this.throwCooldownTicks = tag.getInt("ThrowCooldownTicks");
-        this.stampCooldownTicks = tag.getInt("StampCooldownTicks");
-        this.chargeCooldownTicks = tag.getInt("ChargeCooldownTicks");
-        this.drinkingTicks = tag.getInt("DrinkingTicks");
-        this.drinkingCooldownTicks = tag.getInt("DrinkingCooldownTicks");
-        this.drinkingParticleTicks = tag.getInt("DrinkingParticleTicks");
-        this.trumpetingTicks = tag.getInt("TrumpetingTicks");
-        this.memorizedThreatTicks = tag.getInt("MemorizedThreatTicks");
-        this.attackCooldownTicks = tag.getInt("AttackCooldownTicks");
-        this.chargeDirectionX = tag.getDouble("ChargeDirectionX");
-        this.chargeDirectionZ = tag.getDouble("ChargeDirectionZ");
-        if (tag.contains("HerdCenterX")) {
-            this.herdCenter = new BlockPos(tag.getInt("HerdCenterX"), tag.getInt("HerdCenterY"), tag.getInt("HerdCenterZ"));
+        this.entityData.set(DATA_FLAGS, tag.getIntOr("ElephantFlags", 0));
+        this.setTrust(tag.getIntOr("Trust", 0));
+        this.throwTicks = tag.getIntOr("ThrowTicks", 0);
+        this.stampTicks = tag.getIntOr("StampTicks", 0);
+        this.chargeWindupTicks = tag.getIntOr("ChargeWindupTicks", 0);
+        this.chargeActiveTicks = tag.getIntOr("ChargeActiveTicks", 0);
+        this.chargeRecoveryTicks = tag.getIntOr("ChargeRecoveryTicks", 0);
+        this.throwCooldownTicks = tag.getIntOr("ThrowCooldownTicks", 0);
+        this.stampCooldownTicks = tag.getIntOr("StampCooldownTicks", 0);
+        this.chargeCooldownTicks = tag.getIntOr("ChargeCooldownTicks", 0);
+        this.drinkingTicks = tag.getIntOr("DrinkingTicks", 0);
+        this.drinkingCooldownTicks = tag.getIntOr("DrinkingCooldownTicks", 0);
+        this.drinkingParticleTicks = tag.getIntOr("DrinkingParticleTicks", 0);
+        this.trumpetingTicks = tag.getIntOr("TrumpetingTicks", 0);
+        this.memorizedThreatTicks = tag.getIntOr("MemorizedThreatTicks", 0);
+        this.attackCooldownTicks = tag.getIntOr("AttackCooldownTicks", 0);
+        this.chargeDirectionX = tag.getDoubleOr("ChargeDirectionX", 0D);
+        this.chargeDirectionZ = tag.getDoubleOr("ChargeDirectionZ", 0D);
+        if (tag.read("HerdCenterX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.herdCenter = new BlockPos(tag.getIntOr("HerdCenterX", 0), tag.getIntOr("HerdCenterY", 0), tag.getIntOr("HerdCenterZ", 0));
         } else {
             this.herdCenter = this.blockPosition();
         }
-        if (tag.hasUUID("TrustedPlayer")) {
-            this.trustedPlayerUUID = tag.getUUID("TrustedPlayer");
+        if (tag.read("TrustedPlayer", net.minecraft.core.UUIDUtil.CODEC).isPresent()) {
+            this.trustedPlayerUUID = tag.read("TrustedPlayer", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
         }
-        if (tag.hasUUID("MemorizedThreat")) {
-            this.memorizedThreatUUID = tag.getUUID("MemorizedThreat");
+        if (tag.read("MemorizedThreat", net.minecraft.core.UUIDUtil.CODEC).isPresent()) {
+            this.memorizedThreatUUID = tag.read("MemorizedThreat", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
         }
         this.throwImpactDone = false;
         this.stampImpactDone = false;
@@ -342,7 +344,7 @@ public class ElephantEntity extends Animal {
     @Override
     public void tick() {
         super.tick();
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.updateServerState();
         }
         this.updateAnimationStates();
@@ -462,14 +464,14 @@ public class ElephantEntity extends Animal {
 
         if (!this.chargeImpactDone && target != null && target.isAlive() && this.canPerformDirectAttack(target)) {
             this.chargeImpactDone = true;
-            target.hurt(this.damageSources().mobAttack(this), 14.0F);
+            target.hurtOrSimulate(this.damageSources().mobAttack(this), 14.0F);
             Vec3 knockbackDirection = new Vec3(this.chargeDirectionX, 0.0D, this.chargeDirectionZ);
             if (knockbackDirection.lengthSqr() > 1.0E-6D) {
                 Vec3 normalizedDirection = knockbackDirection.normalize().scale(1.6D);
                 target.push(normalizedDirection.x, 0.4D, normalizedDirection.z);
             }
             if (target instanceof Player player) {
-                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, STUN_DURATION_TICKS, 3, false, false));
+                player.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, STUN_DURATION_TICKS, 3, false, false));
             }
         }
     }
@@ -840,7 +842,7 @@ public class ElephantEntity extends Animal {
         ItemStack itemStack = player.getItemInHand(hand);
 
         if (this.isFood(itemStack)) {
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 int previousTrust = this.getTrust();
 
                 if (this.trustedPlayerUUID == null || this.getTrust() <= TRUST_TAKEOVER_THRESHOLD) {
@@ -862,14 +864,14 @@ public class ElephantEntity extends Animal {
                     this.setInLove(player);
                 }
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            return InteractionResult.SUCCESS;
         }
 
         if (!player.isSecondaryUseActive() && itemStack.isEmpty() && this.isTrustedBy(player) && !this.isBaby()) {
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 player.startRiding(this);
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            return InteractionResult.SUCCESS;
         }
 
         return super.mobInteract(player, hand);
@@ -911,7 +913,7 @@ public class ElephantEntity extends Animal {
     public LivingEntity getControllingPassenger() {
         Entity firstPassenger = this.getFirstPassenger();
         if (firstPassenger instanceof Player player) {
-            if (this.level().isClientSide) return player;
+            if (this.level().isClientSide()) return player;
             if (this.isTrustedBy(player)) return player;
         }
         return null;
@@ -941,16 +943,16 @@ public class ElephantEntity extends Animal {
     @Nullable
     @Override
     public ElephantEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.ELEPHANT.get().create(serverLevel);
+        return EntityTypeRegistry.ELEPHANT.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
-    public boolean doHurtTarget(Entity target) {
+    public boolean doHurtTarget(net.minecraft.server.level.ServerLevel serverLevel, Entity target) {
         if (this.isBaby()) {
             return false;
         }
 
-        boolean hasHit = super.doHurtTarget(target);
+        boolean hasHit = super.doHurtTarget(serverLevel, target);
         if (hasHit) {
             this.attackCooldownTicks = ATTACK_COOLDOWN_TICKS;
         }
@@ -958,17 +960,17 @@ public class ElephantEntity extends Animal {
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float amount) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float amount) {
         Entity directEntity = damageSource.getDirectEntity();
 
         if (directEntity instanceof AbstractArrow arrowEntity) {
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 arrowEntity.setDeltaMovement(arrowEntity.getDeltaMovement().scale(-0.3D));
             }
             return false;
         }
 
-        boolean wasHurt = super.hurt(damageSource, amount);
+        boolean wasHurt = super.hurtServer(serverLevel, damageSource, amount);
         if (wasHurt && this.getLastHurtByMob() instanceof Player player) {
             if (this.trustedPlayerUUID != null && this.trustedPlayerUUID.equals(player.getUUID()) && this.getTrust() > 0) {
                 int reducedTrust = Math.max(0, this.getTrust() - TRUST_FEED_GAIN);
@@ -1019,7 +1021,7 @@ public class ElephantEntity extends Animal {
     @Override
     protected void updateWalkAnimation(float movementAmount) {
         float value = this.getPose() == Pose.STANDING ? Math.min(movementAmount * 6.0F, 1.0F) : 0.0F;
-        this.walkAnimation.update(value, 0.2F);
+        this.walkAnimation.update(value, 0.2F, 1.0F);
     }
 
     public BlockPos getHerdCenter() {

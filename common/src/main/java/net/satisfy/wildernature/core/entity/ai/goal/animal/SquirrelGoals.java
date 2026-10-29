@@ -37,7 +37,7 @@ public class SquirrelGoals {
                 return false;
             }
 
-            if (this.squirrel.level().isNight()) {
+            if (this.squirrel.level().isDarkOutside()) {
                 return false;
             }
 
@@ -198,7 +198,7 @@ public class SquirrelGoals {
                 return false;
             }
 
-            if (this.squirrel.level().isNight()) {
+            if (this.squirrel.level().isDarkOutside()) {
                 return false;
             }
 
@@ -233,7 +233,7 @@ public class SquirrelGoals {
 
         @Override
         public boolean canContinueToUse() {
-            if (this.squirrel.isPanicking() || this.squirrel.level().isNight() || !this.squirrel.hasFreeInventorySlot()) {
+            if (this.squirrel.isPanicking() || this.squirrel.level().isDarkOutside() || !this.squirrel.hasFreeInventorySlot()) {
                 return false;
             }
 

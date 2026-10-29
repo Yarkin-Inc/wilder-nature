@@ -12,16 +12,16 @@ import net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.biome.v1.ModificationPhase;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
-import net.fabricmc.fabric.api.registry.FuelRegistry;
-import net.fabricmc.fabric.api.tag.convention.v1.ConventionalBiomeTags;
+
+import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacementTypes;
@@ -39,7 +39,6 @@ import net.satisfy.wildernature.core.registry.EntityTypeRegistry;
 import net.satisfy.wildernature.core.registry.ObjectRegistry;
 import net.satisfy.wildernature.core.registry.TagsRegistry;
 import net.satisfy.wildernature.core.util.WilderNatureUtil;
-import net.satisfy.wildernature.fabric.compat.TrinketsCompat;
 import net.satisfy.wildernature.fabric.core.config.WilderNatureFabricConfig;
 import net.satisfy.wildernature.fabric.core.world.PlacedFeatures;
 
@@ -56,24 +55,9 @@ public class WilderNatureFabric implements ModInitializer {
     public void onInitialize() {
         AutoConfig.register(WilderNatureFabricConfig.class, GsonConfigSerializer::new);
         WilderNature.init();
-        if (FabricLoader.getInstance().isModLoaded("trinkets")) {
-            TrinketsCompat.init();
-        }
-        registerFuel();
         addSpawns();
         addBiomeModification();
-        UseItemCallback.EVENT.register((player, level, interactionHand) -> {
-            if (!WilderNatureUtil.Truffling.isTruffled(player.getItemInHand(interactionHand))) {
-                return InteractionResultHolder.pass(ItemStack.EMPTY);
-            }
-            WilderNatureUtil.Truffling.FoodValue additionalFoodValues = WilderNatureUtil.Truffling.getAdditionalFoodValue();
-            FoodProperties foodProperties = player.getItemInHand(interactionHand).get(DataComponents.FOOD);
-            if (foodProperties != null) {
-                foodProperties.nutrition = foodProperties.nutrition() + (int) (foodProperties.nutrition() * 0.20F) + additionalFoodValues.nutrition();
-                foodProperties.saturation = foodProperties.saturation() + (foodProperties.saturation() * .20F) + additionalFoodValues.saturationModifier();
-            }
-            return InteractionResultHolder.success(player.getItemInHand(interactionHand));
-        });
+
     }
 
     void addBiomeModification() {
@@ -102,11 +86,6 @@ public class WilderNatureFabric implements ModInitializer {
         }
     }
 
-    private void registerFuel() {
-        FuelRegistry.INSTANCE.add(ObjectRegistry.FISH_OIL.get(), 1600);
-        FuelRegistry.INSTANCE.add(ObjectRegistry.WOODMEAL.get(), 150);
-    }
-
     void addSpawns() {
         WilderNatureFabricConfig config = AutoConfig.getConfigHolder(WilderNatureFabricConfig.class).getConfig();
         WilderNatureFabricConfig.SpawningSettings spawning = config.spawning;
@@ -130,19 +109,19 @@ public class WilderNatureFabric implements ModInitializer {
         addMobSpawn(BiomeTags.IS_SAVANNA, EntityTypeRegistry.LION.get(), spawning.lionSpawnWeight, spawning.lionMinGroupSize, spawning.lionMaxGroupSize);
 
         if (config.world.removeSavannaAnimals) {
-            removeSpawn(BiomeTags.IS_SAVANNA, List.of(EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN, EntityType.COW));
+            removeSpawn(BiomeTags.IS_SAVANNA, List.of(net.minecraft.world.entity.EntityTypes.SHEEP, net.minecraft.world.entity.EntityTypes.PIG, net.minecraft.world.entity.EntityTypes.CHICKEN, net.minecraft.world.entity.EntityTypes.COW));
         }
         if (config.world.removeForestAnimals) {
-            removeSpawn(BiomeTags.IS_FOREST, List.of(EntityType.PIG, EntityType.CHICKEN));
+            removeSpawn(BiomeTags.IS_FOREST, List.of(net.minecraft.world.entity.EntityTypes.PIG, net.minecraft.world.entity.EntityTypes.CHICKEN));
         }
         if (config.world.removeSwampAnimals) {
-            removeSpawn(ConventionalBiomeTags.SWAMP, List.of(EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN, EntityType.COW));
+            removeSpawn(ConventionalBiomeTags.IS_SWAMP, List.of(net.minecraft.world.entity.EntityTypes.SHEEP, net.minecraft.world.entity.EntityTypes.PIG, net.minecraft.world.entity.EntityTypes.CHICKEN, net.minecraft.world.entity.EntityTypes.COW));
         }
         if (config.world.removeJungleAnimals) {
-            removeSpawn(BiomeTags.IS_JUNGLE, List.of(EntityType.PIG, EntityType.CHICKEN, EntityType.COW));
+            removeSpawn(BiomeTags.IS_JUNGLE, List.of(net.minecraft.world.entity.EntityTypes.PIG, net.minecraft.world.entity.EntityTypes.CHICKEN, net.minecraft.world.entity.EntityTypes.COW));
         }
         if (config.world.enableJungleFrogs) {
-            addMobSpawn(BiomeTags.IS_JUNGLE, EntityType.FROG, 8, 3, 4);
+            addMobSpawn(BiomeTags.IS_JUNGLE, net.minecraft.world.entity.EntityTypes.FROG, 8, 3, 4);
         }
 
         SpawnPlacements.register(EntityTypeRegistry.SCORPION.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ScorpionEntity::checkScorpionSpawnRules);
@@ -171,9 +150,9 @@ public class WilderNatureFabric implements ModInitializer {
 
     void removeSpawn(TagKey<Biome> tag, List<EntityType<?>> entityTypes) {
         entityTypes.forEach(entityType -> {
-            ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
+            Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
             Preconditions.checkState(BuiltInRegistries.ENTITY_TYPE.containsKey(id), "Unregistered entity tier: %s", entityType);
-            BiomeModifications.create(id).add(ModificationPhase.REMOVALS, biomeSelector -> biomeSelector.hasTag(tag), context -> context.getSpawnSettings().removeSpawnsOfEntityType(entityType));
+            BiomeModifications.create(id).add(ModificationPhase.REMOVALS, biomeSelector -> biomeSelector.hasTag(tag), context -> context.getMobSpawnSettings().removeSpawns((category, data) -> data.type() == entityType));
         });
     }
 }

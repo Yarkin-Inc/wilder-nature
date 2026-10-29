@@ -20,8 +20,7 @@ public class DeerTrophyData extends SavedData {
 
     public static DeerTrophyData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(DeerTrophyData::new, DeerTrophyData::load, DataFixTypes.SAVED_DATA_RANDOM_SEQUENCES),
-                DATA_NAME
+                new net.minecraft.world.level.saveddata.SavedDataType<>(net.satisfy.wildernature.WilderNature.identifier(DATA_NAME), DeerTrophyData::new, CompoundTag.CODEC.xmap(DeerTrophyData::load, data -> data.save(new CompoundTag())), null)
         );
     }
 
@@ -43,8 +42,7 @@ public class DeerTrophyData extends SavedData {
         setDirty();
     }
 
-    @Override
-    public @NotNull CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+    public @NotNull CompoundTag save(CompoundTag tag) {
         CompoundTag chargesTag = new CompoundTag();
         charges.forEach((pos, value) -> chargesTag.putInt(posToKey(pos), value));
         tag.put("charges", chargesTag);
@@ -56,17 +54,17 @@ public class DeerTrophyData extends SavedData {
         return tag;
     }
 
-    private static DeerTrophyData load(CompoundTag tag, HolderLookup.Provider provider) {
+    private static DeerTrophyData load(CompoundTag tag) {
         DeerTrophyData data = new DeerTrophyData();
 
-        CompoundTag chargesTag = tag.getCompound("charges");
-        for (String key : chargesTag.getAllKeys()) {
-            data.charges.put(keyToPos(key), chargesTag.getInt(key));
+        CompoundTag chargesTag = tag.getCompoundOrEmpty("charges");
+        for (String key : chargesTag.keySet()) {
+            data.charges.put(keyToPos(key), chargesTag.getIntOr(key, 0));
         }
 
-        CompoundTag lastUsedTag = tag.getCompound("lastUsed");
-        for (String key : lastUsedTag.getAllKeys()) {
-            data.lastUsed.put(keyToPos(key), lastUsedTag.getLong(key));
+        CompoundTag lastUsedTag = tag.getCompoundOrEmpty("lastUsed");
+        for (String key : lastUsedTag.keySet()) {
+            data.lastUsed.put(keyToPos(key), lastUsedTag.getLongOr(key, 0L));
         }
 
         return data;

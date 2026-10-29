@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.defensive;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -97,7 +99,7 @@ public class LionEntity extends Animal {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MAX_HEALTH, 30.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.28D)
                 .add(Attributes.ATTACK_DAMAGE, 6.0D)
@@ -186,7 +188,7 @@ public class LionEntity extends Animal {
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.updateThreatLevel();
             this.updateTimers();
             this.updatePounceMotion();
@@ -267,7 +269,7 @@ public class LionEntity extends Animal {
         }
 
         if (this.pounceActiveTicks > 0 && !this.pounceImpactDone && this.distanceToSqr(target) <= 6.25D) {
-            target.hurt(this.damageSources().mobAttack(this), POUNCE_DAMAGE);
+            target.hurtOrSimulate(this.damageSources().mobAttack(this), POUNCE_DAMAGE);
             this.attackCooldownTicks = ATTACK_COOLDOWN_TICKS;
             this.pounceImpactDone = true;
         }
@@ -296,7 +298,8 @@ public class LionEntity extends Animal {
             this.setTarget(player);
             this.alertPride(player);
             this.triggerRoar();
-        } else if (this.getThreatLevel() >= 50 && !this.isWarning()) {
+        } else if (this.getThreatLevel() >= 50 && this.getTarget() == null && !this.isWarning()) {
+            // A new warning during combat makes isBusy() block both melee and pouncing.
             this.startWarning();
         }
     }
@@ -341,7 +344,7 @@ public class LionEntity extends Animal {
 
     private void updateSleepState() {
         if (this.isSleeping()) {
-            if (!this.level().isDay() || this.getTarget() != null || this.isBusy() || this.isStalking() || this.hasWakeUpTriggerNearby()) {
+            if (!this.level().isBrightOutside() || this.getTarget() != null || this.isBusy() || this.isStalking() || this.hasWakeUpTriggerNearby()) {
                 this.wakeUp();
                 return;
             }
@@ -360,7 +363,7 @@ public class LionEntity extends Animal {
             return;
         }
 
-        if (this.getTarget() != null || this.isBusy() || this.isStalking() || !this.level().isDay() || this.isInWaterOrRain()) {
+        if (this.getTarget() != null || this.isBusy() || this.isStalking() || !this.level().isBrightOutside() || this.isInWaterOrRain()) {
             this.sleepPreparationTicks = 0;
             return;
         }
@@ -564,8 +567,8 @@ public class LionEntity extends Animal {
     }
 
     @Override
-    public boolean doHurtTarget(Entity target) {
-        boolean hit = super.doHurtTarget(target);
+    public boolean doHurtTarget(net.minecraft.server.level.ServerLevel serverLevel, Entity target) {
+        boolean hit = super.doHurtTarget(serverLevel, target);
         if (hit) {
             this.attackCooldownTicks = ATTACK_COOLDOWN_TICKS;
             this.playSound(SoundEventRegistry.LION_ATTACK.get(), 1.0F, 0.95F + this.random.nextFloat() * 0.1F);
@@ -591,8 +594,8 @@ public class LionEntity extends Animal {
 
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
-        boolean wasHurt = super.hurt(source, amount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource source, float amount) {
+        boolean wasHurt = super.hurtServer(serverLevel, source, amount);
         if (wasHurt) {
             this.wakeUp();
             Entity attacker = source.getEntity();
@@ -621,7 +624,7 @@ public class LionEntity extends Animal {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt("LionFlags", this.entityData.get(DATA_FLAGS));
         tag.putBoolean("IsMale", this.isMale());
@@ -644,23 +647,23 @@ public class LionEntity extends Animal {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        this.entityData.set(DATA_FLAGS, tag.getInt("LionFlags"));
-        this.setMale(tag.getBoolean("IsMale"));
-        this.pounceWindupTicks = tag.getInt("PounceWindupTicks");
-        this.pounceActiveTicks = tag.getInt("PounceActiveTicks");
-        this.pounceRecoveryTicks = tag.getInt("PounceRecoveryTicks");
-        this.pounceCooldownTicks = tag.getInt("PounceCooldownTicks");
-        this.warnTicks = tag.getInt("WarnTicks");
-        this.roarTicks = tag.getInt("RoarTicks");
-        this.sleepCooldownTicks = tag.getInt("SleepCooldownTicks");
-        this.sleepPreparationTicks = tag.getInt("SleepPreparationTicks");
-        this.requiredSleepPreparationTicks = tag.contains("RequiredSleepPreparationTicks") ? tag.getInt("RequiredSleepPreparationTicks") : 100 + this.random.nextInt(180);
-        this.sleepDurationTicks = tag.getInt("SleepDurationTicks");
-        this.attackCooldownTicks = tag.getInt("AttackCooldownTicks");
-        if (tag.contains("PrideCenterX")) {
-            this.prideCenterPos = new BlockPos(tag.getInt("PrideCenterX"), tag.getInt("PrideCenterY"), tag.getInt("PrideCenterZ"));
+        this.entityData.set(DATA_FLAGS, tag.getIntOr("LionFlags", 0));
+        this.setMale(tag.getBooleanOr("IsMale", false));
+        this.pounceWindupTicks = tag.getIntOr("PounceWindupTicks", 0);
+        this.pounceActiveTicks = tag.getIntOr("PounceActiveTicks", 0);
+        this.pounceRecoveryTicks = tag.getIntOr("PounceRecoveryTicks", 0);
+        this.pounceCooldownTicks = tag.getIntOr("PounceCooldownTicks", 0);
+        this.warnTicks = tag.getIntOr("WarnTicks", 0);
+        this.roarTicks = tag.getIntOr("RoarTicks", 0);
+        this.sleepCooldownTicks = tag.getIntOr("SleepCooldownTicks", 0);
+        this.sleepPreparationTicks = tag.getIntOr("SleepPreparationTicks", 0);
+        this.requiredSleepPreparationTicks = tag.read("RequiredSleepPreparationTicks", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() ? tag.getIntOr("RequiredSleepPreparationTicks", 0) : 100 + this.random.nextInt(180);
+        this.sleepDurationTicks = tag.getIntOr("SleepDurationTicks", 0);
+        this.attackCooldownTicks = tag.getIntOr("AttackCooldownTicks", 0);
+        if (tag.read("PrideCenterX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.prideCenterPos = new BlockPos(tag.getIntOr("PrideCenterX", 0), tag.getIntOr("PrideCenterY", 0), tag.getIntOr("PrideCenterZ", 0));
         } else {
             this.prideCenterPos = null;
         }
@@ -670,7 +673,7 @@ public class LionEntity extends Animal {
 
     @Nullable
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, @Nullable SpawnGroupData spawnGroupData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason spawnType, @Nullable SpawnGroupData spawnGroupData) {
         SpawnGroupData result = super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
         this.prideCenterPos = this.blockPosition();
         this.requiredSleepPreparationTicks = 100 + this.random.nextInt(180);
@@ -691,6 +694,6 @@ public class LionEntity extends Animal {
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob other) {
-        return EntityTypeRegistry.LION.get().create(level);
+        return EntityTypeRegistry.LION.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 }

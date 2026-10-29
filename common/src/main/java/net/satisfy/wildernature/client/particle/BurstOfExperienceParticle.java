@@ -4,18 +4,18 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleProvider;
 import net.minecraft.client.particle.SpriteSet;
-import net.minecraft.client.particle.TextureSheetParticle;
+import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.core.particles.SimpleParticleType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class BurstOfExperienceParticle extends TextureSheetParticle {
+public class BurstOfExperienceParticle extends SingleQuadParticle {
     private final SpriteSet spriteSet;
     private final float initialScale;
     private final float peakAlpha;
 
-    protected BurstOfExperienceParticle(ClientLevel level, double positionX, double positionY, double positionZ, double velocityX, double velocityY, double velocityZ, SpriteSet spriteSet) {
-        super(level, positionX, positionY, positionZ, velocityX, velocityY, velocityZ);
+    protected BurstOfExperienceParticle(ClientLevel level, double positionX, double positionY, double positionZ, double velocityX, double velocityY, double velocityZ, SpriteSet spriteSet, net.minecraft.client.renderer.texture.TextureAtlasSprite initialSprite) {
+        super(level, positionX, positionY, positionZ, velocityX, velocityY, velocityZ, initialSprite);
         this.spriteSet = spriteSet;
         this.friction = 0.9F;
         this.gravity = -0.01F;
@@ -31,7 +31,7 @@ public class BurstOfExperienceParticle extends TextureSheetParticle {
         this.peakAlpha = 0.78F + this.random.nextFloat() * 0.18F;
         this.alpha = 0.0F;
         this.hasPhysics = false;
-        this.pickSprite(this.spriteSet);
+        this.setSprite(this.spriteSet.get(this.random));
     }
 
     @Override
@@ -61,13 +61,13 @@ public class BurstOfExperienceParticle extends TextureSheetParticle {
     }
 
     @Override
-    public int getLightColor(float partialTick) {
+    public int getLightCoords(float partialTick) {
         return 240;
     }
 
     @Override
-    public net.minecraft.client.particle.@NotNull ParticleRenderType getRenderType() {
-        return net.minecraft.client.particle.ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
+    public @NotNull SingleQuadParticle.Layer getLayer() {
+        return net.minecraft.client.particle.SingleQuadParticle.Layer.TRANSLUCENT;
     }
 
     public static class Provider implements ParticleProvider<SimpleParticleType> {
@@ -78,8 +78,8 @@ public class BurstOfExperienceParticle extends TextureSheetParticle {
         }
 
         @Override
-        public @Nullable Particle createParticle(SimpleParticleType simpleParticleType, ClientLevel clientLevel, double positionX, double positionY, double positionZ, double velocityX, double velocityY, double velocityZ) {
-            return new BurstOfExperienceParticle(clientLevel, positionX, positionY, positionZ, velocityX, velocityY, velocityZ, this.spriteSet);
+        public @Nullable Particle createParticle(SimpleParticleType simpleParticleType, ClientLevel clientLevel, double positionX, double positionY, double positionZ, double velocityX, double velocityY, double velocityZ, net.minecraft.util.RandomSource random) {
+            return new BurstOfExperienceParticle(clientLevel, positionX, positionY, positionZ, velocityX, velocityY, velocityZ, this.spriteSet, this.spriteSet.get(random));
         }
     }
 }

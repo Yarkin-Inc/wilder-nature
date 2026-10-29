@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.neutral;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -92,7 +94,7 @@ public class GiraffeEntity extends Animal {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.28D).add(Attributes.MAX_HEALTH, 24.0D).add(Attributes.ATTACK_DAMAGE, 6.0D).add(Attributes.FOLLOW_RANGE, 28.0D).add(Attributes.KNOCKBACK_RESISTANCE, 0.35D).add(Attributes.STEP_HEIGHT, 1.0D);
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes().add(Attributes.MOVEMENT_SPEED, 0.28D).add(Attributes.MAX_HEALTH, 24.0D).add(Attributes.ATTACK_DAMAGE, 6.0D).add(Attributes.FOLLOW_RANGE, 28.0D).add(Attributes.KNOCKBACK_RESISTANCE, 0.35D).add(Attributes.STEP_HEIGHT, 1.0D);
     }
 
     @Override
@@ -197,7 +199,7 @@ public class GiraffeEntity extends Animal {
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData spawnData) {
         SpawnGroupData out = super.finalizeSpawn(level, difficulty, reason, spawnData);
         this.eatingTicks = 0;
         this.eatingCooldownTicks = 0;
@@ -216,7 +218,7 @@ public class GiraffeEntity extends Animal {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt("Flags", this.entityData.get(DATA_FLAGS_ID));
         tag.putBoolean("Alert", this.isAlert());
@@ -242,25 +244,25 @@ public class GiraffeEntity extends Animal {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        this.entityData.set(DATA_FLAGS_ID, tag.getInt("Flags"));
-        if (tag.contains("Alert")) this.entityData.set(DATA_ALERT, tag.getBoolean("Alert"));
-        if (tag.contains("Sleeping")) this.entityData.set(DATA_SLEEPING, tag.getBoolean("Sleeping"));
-        if (tag.contains("Eating")) this.setFlag(FLAG_EATING, tag.getBoolean("Eating"));
-        if (tag.contains("RidingBurst")) this.setFlag(FLAG_RIDING_BURST, tag.getBoolean("RidingBurst"));
-        if (tag.contains("Fatigued")) this.setFlag(FLAG_FATIGUED, tag.getBoolean("Fatigued"));
-        this.eatingTicks = tag.getInt("EatingTicks");
-        this.eatingCooldownTicks = tag.getInt("EatingCooldownTicks");
-        this.rideTicks = tag.getInt("RideTicks");
-        this.rideCooldownTicks = tag.getInt("RideCooldownTicks");
-        this.fatigueTicks = tag.getInt("FatigueTicks");
-        this.alertTicks = tag.getInt("AlertTicks");
-        this.sleepPreparationTicks = tag.getInt("SleepPreparationTicks");
-        this.requiredSleepPreparationTicks = tag.contains("RequiredSleepPreparationTicks") ? tag.getInt("RequiredSleepPreparationTicks") : 100 + this.random.nextInt(120);
-        this.sleepCooldownTicks = tag.getInt("SleepCooldownTicks");
-        this.awareness = tag.getFloat("Awareness");
-        if (tag.contains("EatingTargetX") && tag.contains("EatingTargetY") && tag.contains("EatingTargetZ")) this.eatingTargetPos = new BlockPos(tag.getInt("EatingTargetX"), tag.getInt("EatingTargetY"), tag.getInt("EatingTargetZ"));
+        this.entityData.set(DATA_FLAGS_ID, tag.getIntOr("Flags", 0));
+        if (tag.read("Alert", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) this.entityData.set(DATA_ALERT, tag.getBooleanOr("Alert", false));
+        if (tag.read("Sleeping", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) this.entityData.set(DATA_SLEEPING, tag.getBooleanOr("Sleeping", false));
+        if (tag.read("Eating", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) this.setFlag(FLAG_EATING, tag.getBooleanOr("Eating", false));
+        if (tag.read("RidingBurst", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) this.setFlag(FLAG_RIDING_BURST, tag.getBooleanOr("RidingBurst", false));
+        if (tag.read("Fatigued", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) this.setFlag(FLAG_FATIGUED, tag.getBooleanOr("Fatigued", false));
+        this.eatingTicks = tag.getIntOr("EatingTicks", 0);
+        this.eatingCooldownTicks = tag.getIntOr("EatingCooldownTicks", 0);
+        this.rideTicks = tag.getIntOr("RideTicks", 0);
+        this.rideCooldownTicks = tag.getIntOr("RideCooldownTicks", 0);
+        this.fatigueTicks = tag.getIntOr("FatigueTicks", 0);
+        this.alertTicks = tag.getIntOr("AlertTicks", 0);
+        this.sleepPreparationTicks = tag.getIntOr("SleepPreparationTicks", 0);
+        this.requiredSleepPreparationTicks = tag.read("RequiredSleepPreparationTicks", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() ? tag.getIntOr("RequiredSleepPreparationTicks", 0) : 100 + this.random.nextInt(120);
+        this.sleepCooldownTicks = tag.getIntOr("SleepCooldownTicks", 0);
+        this.awareness = tag.getFloatOr("Awareness", 0F);
+        if (tag.read("EatingTargetX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && tag.read("EatingTargetY", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && tag.read("EatingTargetZ", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) this.eatingTargetPos = new BlockPos(tag.getIntOr("EatingTargetX", 0), tag.getIntOr("EatingTargetY", 0), tag.getIntOr("EatingTargetZ", 0));
         else this.eatingTargetPos = null;
     }
 
@@ -268,7 +270,7 @@ public class GiraffeEntity extends Animal {
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.updateSleep();
             this.updateAwareness();
             this.updateEating();
@@ -285,12 +287,12 @@ public class GiraffeEntity extends Animal {
     private void updateSleep() {
         if (this.sleepCooldownTicks > 0) this.sleepCooldownTicks--;
 
-        boolean isNight = !this.level().isDay();
+        boolean isNight = !this.level().isBrightOutside();
         boolean isStill = this.getDeltaMovement().horizontalDistanceSqr() < 0.002D;
         boolean hasThreatsNearby = !this.level().getEntitiesOfClass(Monster.class, this.getBoundingBox().inflate(12.0D, 4.0D, 12.0D)).isEmpty();
 
         if (this.isSleeping()) {
-            if (!isNight || this.isInWaterOrBubble() || this.isVehicle() || this.isAlert() || this.isEating() || this.isRidingBurst() || hasThreatsNearby || this.hasWakeUpTriggerNearby()) {
+            if (!isNight || this.isInWater() || this.isVehicle() || this.isAlert() || this.isEating() || this.isRidingBurst() || hasThreatsNearby || this.hasWakeUpTriggerNearby()) {
                 this.wakeUp();
                 if (this.hasWakeUpTriggerNearby()) {
                     this.alertTicks = Math.max(this.alertTicks, ALERT_DURATION_TICKS);
@@ -305,7 +307,7 @@ public class GiraffeEntity extends Animal {
             return;
         }
 
-        if (isNight && !this.isInWaterOrBubble() && !this.isVehicle() && !this.isAlert() && !this.isEating() && !this.isRidingBurst() && !this.isFatigued() && !hasThreatsNearby && this.sleepCooldownTicks <= 0 && isStill) {
+        if (isNight && !this.isInWater() && !this.isVehicle() && !this.isAlert() && !this.isEating() && !this.isRidingBurst() && !this.isFatigued() && !hasThreatsNearby && this.sleepCooldownTicks <= 0 && isStill) {
             this.sleepPreparationTicks++;
             if (this.sleepPreparationTicks > this.requiredSleepPreparationTicks) this.startSleeping();
         } else if (this.sleepPreparationTicks > 0) {
@@ -457,8 +459,8 @@ public class GiraffeEntity extends Animal {
 
     private void finishEatingDrops() {
         if (!(this.level() instanceof ServerLevel) || this.eatingTargetPos == null || !this.isValidEatingTarget(this.eatingTargetPos)) return;
-        if (this.random.nextFloat() < 0.5F) this.spawnAtLocation(new ItemStack(Items.STICK, 1 + this.random.nextInt(2)));
-        if (this.random.nextFloat() < 0.2F) this.spawnAtLocation(new ItemStack(Items.ACACIA_SAPLING));
+        if (this.random.nextFloat() < 0.5F) this.spawnAtLocation((net.minecraft.server.level.ServerLevel) level(), new ItemStack(Items.STICK, 1 + this.random.nextInt(2)));
+        if (this.random.nextFloat() < 0.2F) this.spawnAtLocation((net.minecraft.server.level.ServerLevel) level(), new ItemStack(Items.ACACIA_SAPLING));
     }
 
     private void updateRideState() {
@@ -513,7 +515,7 @@ public class GiraffeEntity extends Animal {
         this.alertState.animateWhen(this.isAlert(), this.tickCount);
         this.sleepState.animateWhen(this.isSleeping(), this.tickCount);
 
-        if (this.level().isClientSide) this.setupAnimationStates();
+        if (this.level().isClientSide()) this.setupAnimationStates();
     }
 
     private void updateRidingBurstParticles() {
@@ -623,17 +625,17 @@ public class GiraffeEntity extends Animal {
         if (this.isSleeping()) this.wakeUp();
         if (this.isBaby() || this.isVehicle() || this.isAlert() || this.isEating() || this.rideCooldownTicks > 0) return super.mobInteract(player, hand);
 
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.startRidingBurst();
             this.rideTicks = RIDE_DURATION_MIN;
-            if (!player.startRiding(this, true)) {
+            if (!player.startRiding(this, true, true)) {
                 this.stopRidingBurst();
                 this.rideTicks = 0;
                 return InteractionResult.PASS;
             }
         }
 
-        return InteractionResult.sidedSuccess(this.level().isClientSide);
+        return InteractionResult.SUCCESS;
     }
 
     @Override
@@ -687,9 +689,9 @@ public class GiraffeEntity extends Animal {
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float amount) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float amount) {
         this.wakeUp();
-        boolean wasHurt = super.hurt(damageSource, amount);
+        boolean wasHurt = super.hurtServer(serverLevel, damageSource, amount);
         if (wasHurt) {
             this.alertTicks = ALERT_DURATION_TICKS;
             this.entityData.set(DATA_ALERT, true);
@@ -707,7 +709,7 @@ public class GiraffeEntity extends Animal {
     @Nullable
     @Override
     public GiraffeEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.GIRAFFE.get().create(serverLevel);
+        return EntityTypeRegistry.GIRAFFE.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override

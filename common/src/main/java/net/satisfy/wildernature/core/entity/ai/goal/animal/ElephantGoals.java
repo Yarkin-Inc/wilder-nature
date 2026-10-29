@@ -59,7 +59,7 @@ public class ElephantGoals {
                         this.elephantEntity.getBoundingBox().inflate(3.6D, 1.0D, 3.6D),
                         entity -> entity != this.elephantEntity && entity.isAlive());
                 for (LivingEntity hitTarget : hitTargets) {
-                    hitTarget.hurt(this.elephantEntity.damageSources().mobAttack(this.elephantEntity), 11.0F);
+                    hitTarget.hurtOrSimulate(this.elephantEntity.damageSources().mobAttack(this.elephantEntity), 11.0F);
                     Vec3 pushDirection = hitTarget.position().subtract(this.elephantEntity.position());
                     if (pushDirection.lengthSqr() > 1.0E-6D) {
                         Vec3 normalizedDirection = pushDirection.normalize().scale(0.9D);
@@ -226,7 +226,7 @@ public class ElephantGoals {
             if (!this.elephantEntity.throwImpactDone && this.elephantEntity.throwTicks <= THROW_DURATION - THROW_IMPACT_TICK) {
                 this.elephantEntity.throwImpactDone = true;
                 if (this.elephantEntity.hasLineOfSight(target) && this.elephantEntity.distanceTo(target) <= THROW_RANGE_MAX + 2.0D) {
-                    target.hurt(this.elephantEntity.damageSources().mobAttack(this.elephantEntity), 8.0F);
+                    target.hurtOrSimulate(this.elephantEntity.damageSources().mobAttack(this.elephantEntity), 8.0F);
                     Vec3 pushDirection = target.position().subtract(this.elephantEntity.position()).normalize().scale(1.0D);
                     target.push(pushDirection.x, 0.45D, pushDirection.z);
                 }

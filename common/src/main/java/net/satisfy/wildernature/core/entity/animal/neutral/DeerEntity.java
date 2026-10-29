@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.neutral;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -17,8 +19,8 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.monster.Pillager;
-import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.monster.illager.Pillager;
+import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
@@ -100,7 +102,7 @@ public class DeerEntity extends Animal {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.27D).add(Attributes.MAX_HEALTH, 10.0D).add(Attributes.ATTACK_DAMAGE, 1.5D);
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes().add(Attributes.MOVEMENT_SPEED, 0.27D).add(Attributes.MAX_HEALTH, 10.0D).add(Attributes.ATTACK_DAMAGE, 1.5D);
     }
 
     @Override
@@ -155,7 +157,7 @@ public class DeerEntity extends Animal {
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData spawnData) {
         SpawnGroupData out = super.finalizeSpawn(level, difficulty, reason, spawnData);
         if (this.random.nextFloat() < 0.01F) {
             this.entityData.set(DATA_WHITE, true);
@@ -165,7 +167,7 @@ public class DeerEntity extends Animal {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         tag.putBoolean("White", this.isWhite());
         tag.putBoolean("Sleeping", this.isSleeping());
@@ -178,7 +180,7 @@ public class DeerEntity extends Animal {
         tag.putInt("AlarmTicks", this.alarmTicks);
         tag.putFloat("Awareness", this.awareness);
         if (this.herdLeaderUUID != null) {
-            tag.putUUID("HerdLeaderUUID", this.herdLeaderUUID);
+            tag.store("HerdLeaderUUID", net.minecraft.core.UUIDUtil.CODEC, this.herdLeaderUUID);
         }
         if (this.fleeFrom != null) {
             tag.putDouble("FleeFromX", this.fleeFrom.x);
@@ -188,25 +190,25 @@ public class DeerEntity extends Animal {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        if (tag.contains("White")) {
-            this.entityData.set(DATA_WHITE, tag.getBoolean("White"));
+        if (tag.read("White", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.entityData.set(DATA_WHITE, tag.getBooleanOr("White", false));
         }
-        if (tag.contains("Sleeping")) {
-            this.entityData.set(DATA_SLEEPING, tag.getBoolean("Sleeping"));
+        if (tag.read("Sleeping", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.entityData.set(DATA_SLEEPING, tag.getBooleanOr("Sleeping", false));
         }
-        this.isLeader = tag.getBoolean("IsLeader");
-        this.sleepPreparationTicks = tag.getInt("SleepPreparationTicks");
-        this.requiredSleepPreparationTicks = tag.contains("RequiredSleepPreparationTicks") ? tag.getInt("RequiredSleepPreparationTicks") : 100 + this.random.nextInt(120);
-        this.sleepCooldownTicks = tag.getInt("SleepCooldownTicks");
-        this.globalCooldown = tag.getInt("GlobalCooldown");
-        this.callCooldown = tag.getInt("CallCooldown");
-        this.alarmTicks = tag.getInt("AlarmTicks");
-        this.awareness = tag.getFloat("Awareness");
-        this.herdLeaderUUID = tag.hasUUID("HerdLeaderUUID") ? tag.getUUID("HerdLeaderUUID") : null;
-        if (tag.contains("FleeFromX") && tag.contains("FleeFromY") && tag.contains("FleeFromZ")) {
-            this.fleeFrom = new Vec3(tag.getDouble("FleeFromX"), tag.getDouble("FleeFromY"), tag.getDouble("FleeFromZ"));
+        this.isLeader = tag.getBooleanOr("IsLeader", false);
+        this.sleepPreparationTicks = tag.getIntOr("SleepPreparationTicks", 0);
+        this.requiredSleepPreparationTicks = tag.read("RequiredSleepPreparationTicks", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() ? tag.getIntOr("RequiredSleepPreparationTicks", 0) : 100 + this.random.nextInt(120);
+        this.sleepCooldownTicks = tag.getIntOr("SleepCooldownTicks", 0);
+        this.globalCooldown = tag.getIntOr("GlobalCooldown", 0);
+        this.callCooldown = tag.getIntOr("CallCooldown", 0);
+        this.alarmTicks = tag.getIntOr("AlarmTicks", 0);
+        this.awareness = tag.getFloatOr("Awareness", 0F);
+        this.herdLeaderUUID = tag.read("HerdLeaderUUID", net.minecraft.core.UUIDUtil.CODEC).isPresent() ? tag.read("HerdLeaderUUID", net.minecraft.core.UUIDUtil.CODEC).orElse(null) : null;
+        if (tag.read("FleeFromX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && tag.read("FleeFromY", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && tag.read("FleeFromZ", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.fleeFrom = new Vec3(tag.getDoubleOr("FleeFromX", 0D), tag.getDoubleOr("FleeFromY", 0D), tag.getDoubleOr("FleeFromZ", 0D));
         } else {
             this.fleeFrom = null;
         }
@@ -216,7 +218,7 @@ public class DeerEntity extends Animal {
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.updateAwareness();
             this.updateSleep();
             this.updateHerd();
@@ -280,7 +282,7 @@ public class DeerEntity extends Animal {
             this.sleepCooldownTicks--;
         }
 
-        boolean isNight = !this.level().isDay();
+        boolean isNight = !this.level().isBrightOutside();
         boolean isStill = this.getDeltaMovement().horizontalDistanceSqr() < 0.002D;
         boolean isOnGrassBlock = this.level().getBlockState(this.blockPosition().below()).is(Blocks.GRASS_BLOCK);
 
@@ -329,7 +331,7 @@ public class DeerEntity extends Animal {
             }
 
             if (this.herdLeaderUUID == null) {
-                DeerEntity nearest = this.level().getNearestEntity(
+                DeerEntity nearest = ((net.minecraft.server.level.ServerLevel) this.level()).getNearestEntity(
                         this.level().getEntitiesOfClass(DeerEntity.class, this.getBoundingBox().inflate(HERD_SEARCH_RADIUS)),
                         TargetingConditions.forNonCombat(), this, this.getX(), this.getY(), this.getZ()
                 );
@@ -349,7 +351,7 @@ public class DeerEntity extends Animal {
         this.lookAroundState.animateWhen(this.isLookingAround(), this.tickCount);
         this.sleepState.animateWhen(this.isSleeping(), this.tickCount);
 
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             this.setupAnimationStates();
         }
     }
@@ -362,7 +364,7 @@ public class DeerEntity extends Animal {
         if (this.alarmTicks > 0) {
             this.alarmTicks--;
 
-            if (this.fleeFrom != null && !this.level().isClientSide) {
+            if (this.fleeFrom != null && !this.level().isClientSide()) {
                 Vec3 fleeDirection = this.position().subtract(this.fleeFrom);
 
                 if (fleeDirection.lengthSqr() > 0.001D) {
@@ -563,7 +565,7 @@ public class DeerEntity extends Animal {
     @Nullable
     @Override
     public DeerEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.DEER.get().create(serverLevel);
+        return EntityTypeRegistry.DEER.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -596,15 +598,15 @@ public class DeerEntity extends Animal {
 
         if (killer instanceof Player player) {
             player.addEffect(new MobEffectInstance(MobEffects.BAD_OMEN, 72000, 0));
-            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 6000, 1));
+            player.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 6000, 1));
         }
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float amount) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float amount) {
         Entity threat = damageSource.getEntity();
         this.broadcastCall(threat);
-        return super.hurt(damageSource, amount);
+        return super.hurtServer(serverLevel, damageSource, amount);
     }
 
     private void broadcastCall(@Nullable Entity threat) {
@@ -612,7 +614,7 @@ public class DeerEntity extends Animal {
             return;
         }
 
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             return;
         }
 

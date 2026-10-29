@@ -7,12 +7,12 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.levelgen.placement.PlacementContext;
 import net.minecraft.world.level.levelgen.placement.PlacementFilter;
-import net.minecraft.world.level.levelgen.placement.PlacementModifierType;
+
 import net.satisfy.wildernature.core.registry.WorldgenRegistry;
 import net.satisfy.wildernature.platform.PlatformHelper;
 import org.jetbrains.annotations.NotNull;
 
-public class ConfigRarityFilter extends PlacementFilter {
+public class ConfigRarityFilter implements PlacementFilter {
     public static final MapCodec<ConfigRarityFilter> CODEC = Option.CODEC.fieldOf("option").xmap(ConfigRarityFilter::new, filter -> filter.option);
 
     private final Option option;
@@ -22,7 +22,7 @@ public class ConfigRarityFilter extends PlacementFilter {
     }
 
     @Override
-    protected boolean shouldPlace(PlacementContext context, RandomSource random, BlockPos pos) {
+    public boolean shouldPlace(PlacementContext context, RandomSource random, BlockPos pos) {
         int rarity = switch (this.option) {
             case TERMITE_MOUND -> PlatformHelper.getTermiteMoundRarity();
             case HOLLOW_CACHE -> PlatformHelper.getHollowCacheRarity();
@@ -31,8 +31,8 @@ public class ConfigRarityFilter extends PlacementFilter {
     }
 
     @Override
-    public @NotNull PlacementModifierType<?> type() {
-        return WorldgenRegistry.CONFIG_RARITY_FILTER.get();
+    public @NotNull MapCodec<ConfigRarityFilter> codec() {
+        return CODEC;
     }
 
     public enum Option implements StringRepresentable {

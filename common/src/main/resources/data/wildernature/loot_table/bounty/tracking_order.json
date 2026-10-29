@@ -19,14 +19,14 @@
           "type": "minecraft:item",
           "weight": 17,
           "name": "wildernature:thick_leather",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 4
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -34,14 +34,14 @@
           "type": "minecraft:item",
           "weight": 12,
           "name": "minecraft:paper",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 4,
                 "max": 10
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -49,14 +49,14 @@
           "type": "minecraft:item",
           "weight": 12,
           "name": "minecraft:arrow",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 4,
                 "max": 12
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -64,14 +64,14 @@
           "type": "minecraft:item",
           "weight": 10,
           "name": "minecraft:torch",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 8,
                 "max": 16
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -79,14 +79,14 @@
           "type": "minecraft:item",
           "weight": 9,
           "name": "minecraft:cooked_beef",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 3,
                 "max": 6
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -94,14 +94,14 @@
           "type": "minecraft:item",
           "weight": 8,
           "name": "minecraft:emerald",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 1,
                 "max": 3
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -119,14 +119,14 @@
           "type": "minecraft:item",
           "weight": 6,
           "name": "minecraft:gold_ingot",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 4
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -134,14 +134,14 @@
           "type": "minecraft:item",
           "weight": 6,
           "name": "minecraft:leather",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 5
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -154,14 +154,14 @@
           "type": "minecraft:item",
           "weight": 5,
           "name": "minecraft:bone",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 6
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },

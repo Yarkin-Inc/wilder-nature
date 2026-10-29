@@ -1,57 +1,55 @@
 package net.satisfy.wildernature.client.render.entity;
 
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.culling.Frustum;
+import com.mojang.renderpearl.api.pipeline.CompareOp;
+import com.mojang.renderpearl.api.pipeline.DepthStencilState;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.satisfy.wildernature.WilderNature;
 import net.satisfy.wildernature.core.entity.fx.GlowingBlock;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.OptionalDouble;
+public class GlowingBlockRenderer extends EntityRenderer<GlowingBlock, GlowingBlockRenderer.State> {
+    private static final RenderType LINES_NO_DEPTH = RenderType.create("wildernature_glowing_block",
+            RenderSetup.builder(RenderPipelines.register(RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
+                    .withLocation(WilderNature.identifier("pipeline/glowing_block"))
+                    .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
+                    .withColorTargetState(com.mojang.renderpearl.api.pipeline.ColorTargetState.DEFAULT)
+                    .withCull(false).build())).createRenderSetup());
 
-public class GlowingBlockRenderer extends EntityRenderer<GlowingBlock> {
-
-    private static final RenderType LINES_NO_DEPTH = RenderType.create("lines_no_depth", DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES, 256, RenderType.CompositeState.builder().setShaderState(RenderType.RENDERTYPE_LINES_SHADER).setWriteMaskState(RenderType.COLOR_WRITE).setCullState(RenderType.NO_CULL).setDepthTestState(RenderType.NO_DEPTH_TEST).setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY).setLineState(new RenderStateShard.LineStateShard(OptionalDouble.of(6.0))).createCompositeState(false));
-
-    public GlowingBlockRenderer(EntityRendererProvider.Context context) {
-        super(context);
+    public static class State extends EntityRenderState {
+        public VoxelShape shape = Shapes.empty();
+        public int color;
     }
 
-    @Override
-    public @NotNull ResourceLocation getTextureLocation(GlowingBlock entity) {
-        return ResourceLocation.withDefaultNamespace("textures/misc/white.png");
-    }
+    public GlowingBlockRenderer(EntityRendererProvider.Context context) { super(context); }
 
-    @Override
-    public boolean shouldRender(GlowingBlock entity, Frustum frustum, double x, double y, double z) {
+    @Override public State createRenderState() { return new State(); }
+
+    @Override public boolean shouldRender(GlowingBlock entity, Frustum frustum, double x, double y, double z, float partialTicks) {
         return true;
     }
 
-    @Override
-    public void render(GlowingBlock entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
-        poseStack.pushPose();
-        poseStack.translate(0.0D, -0.5D, 0.0D);
+    @Override public void extractRenderState(GlowingBlock entity, State state, float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        state.shape = Shapes.create(entity.getBoundingBox().move(-entity.getX(), -entity.getY(), -entity.getZ()));
+        state.color = 0xFF000000 | entity.getGlowColor();
+    }
 
-        VertexConsumer vertexConsumer = buffer.getBuffer(LINES_NO_DEPTH);
-        AABB boundingBox = entity.getBoundingBox().move(-entity.getX(), -entity.getY(), -entity.getZ());
-
-        int glowColor = entity.getGlowColor();
-        float red = (float) (glowColor >> 16 & 255) / 255.0F;
-        float green = (float) (glowColor >> 8 & 255) / 255.0F;
-        float blue = (float) (glowColor & 255) / 255.0F;
-
-        LevelRenderer.renderLineBox(poseStack, vertexConsumer, boundingBox, red, green, blue, 1.0F);
-        poseStack.popPose();
-
-        super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+    @Override public void submit(State state, PoseStack pose, SubmitNodeCollector collector, CameraRenderState camera) {
+        pose.pushPose();
+        pose.translate(0, -0.5, 0);
+        collector.submitShapeOutline(pose, state.shape, LINES_NO_DEPTH, state.color, 6.0F, false);
+        pose.popPose();
+        super.submit(state, pose, collector, camera);
     }
 }

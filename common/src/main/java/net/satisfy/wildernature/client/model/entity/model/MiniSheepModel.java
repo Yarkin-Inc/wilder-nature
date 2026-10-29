@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.MiniSheepRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -16,13 +16,14 @@ import net.satisfy.wildernature.core.entity.animal.neutral.MiniSheepEntity;
 import org.jetbrains.annotations.NotNull;
 
 @Environment(EnvType.CLIENT)
-public class MiniSheepModel<T extends MiniSheepEntity> extends HierarchicalModel<T> {
+public class MiniSheepModel<T extends MiniSheepRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("minisheep"), "main");
 
     private final ModelPart miniSheep;
     private final ModelPart head;
 
     public MiniSheepModel(ModelPart root) {
+        super(root);
         this.miniSheep = root.getChild("mini_sheep");
         this.head = this.miniSheep.getChild("head");
     }
@@ -61,7 +62,12 @@ public class MiniSheepModel<T extends MiniSheepEntity> extends HierarchicalModel
     }
 
     @Override
-    public void setupAnim(MiniSheepEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         if (entity.isMaehAnimating()) {
@@ -96,13 +102,7 @@ public class MiniSheepModel<T extends MiniSheepEntity> extends HierarchicalModel
         this.head.xRot = headPitch * ((float) Math.PI / 180F);
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.miniSheep.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.miniSheep;
-    }
+
+
 }

@@ -3,7 +3,7 @@ package net.satisfy.wildernature.core.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -32,11 +32,7 @@ public class CompletionistBannerBlock extends BaseEntityBlock {
         super(properties);
         makeDefaultState();
     }
-    public static final MapCodec<CompletionistBannerBlock> CODEC = simpleCodec(CompletionistBannerBlock::new);
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
+
 
     @Nullable
     @Override
@@ -99,14 +95,14 @@ public class CompletionistBannerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @NotNull BlockState updateShape(BlockState blockState, Direction direction, BlockState blockState2, LevelAccessor levelAccessor, BlockPos blockPos, BlockPos blockPos2) {
+    public @NotNull BlockState updateShape(BlockState blockState, net.minecraft.world.level.LevelReader levelAccessor, net.minecraft.world.level.ScheduledTickAccess scheduledTicks, BlockPos blockPos, Direction direction, BlockPos blockPos2, BlockState blockState2, net.minecraft.util.RandomSource random) {
         if (direction == Direction.DOWN && !blockState.canSurvive(levelAccessor, blockPos)) {
             return Blocks.AIR.defaultBlockState();
         }
-        return super.updateShape(blockState, direction, blockState2, levelAccessor, blockPos, blockPos2);
+        return super.updateShape(blockState, levelAccessor, scheduledTicks, blockPos, direction, blockPos2, blockState2, random);
     }
 
-    public ResourceLocation getRenderTexture() {
+    public Identifier getRenderTexture() {
         if (this == ObjectRegistry.FOX_TRAPPER_BANNER.get()) {
             return WilderNature.identifier("textures/banner/fox_trapper.png");
         } else if (this == ObjectRegistry.BUNNY_STALKER_BANNER.get()) {

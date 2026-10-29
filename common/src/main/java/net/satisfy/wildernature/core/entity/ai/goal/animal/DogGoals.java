@@ -9,7 +9,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
-import net.minecraft.world.entity.animal.Cat;
+import net.minecraft.world.entity.animal.feline.Cat;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.item.ItemStack;
@@ -98,7 +98,7 @@ public class DogGoals {
 
         private List<Cat> getNearbyCats() {
             if (this.catList == null || this.dog.tickCount - this.lastCatUpdate >= CAT_SEARCH_INTERVAL) {
-                this.catList = this.dog.level().getNearbyEntities(Cat.class, TargetingConditions.forNonCombat(), this.dog, this.dog.getBoundingBox().inflate(16.0D));
+                this.catList = ((net.minecraft.server.level.ServerLevel) this.dog.level()).getNearbyEntities(Cat.class, TargetingConditions.forNonCombat(), this.dog, this.dog.getBoundingBox().inflate(16.0D));
                 this.lastCatUpdate = this.dog.tickCount;
             }
             return this.catList;
@@ -304,7 +304,7 @@ public class DogGoals {
         }
 
         private boolean hasSolidSupport(BlockPos floorPos) {
-            return this.dog.level().getBlockState(floorPos).isSolidRender(this.dog.level(), floorPos) || this.dog.level().getBlockState(floorPos).is(BlockTags.LEAVES) || this.dog.level().getBlockState(floorPos).is(BlockTags.LOGS);
+            return this.dog.level().getBlockState(floorPos).isSolidRender() || this.dog.level().getBlockState(floorPos).is(BlockTags.LEAVES) || this.dog.level().getBlockState(floorPos).is(BlockTags.LOGS);
         }
     }
 

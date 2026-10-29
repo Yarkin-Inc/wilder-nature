@@ -9,14 +9,14 @@
           "type": "minecraft:item",
           "weight": 20,
           "name": "minecraft:oak_log",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 4,
                 "max": 12
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -24,14 +24,14 @@
           "type": "minecraft:item",
           "weight": 10,
           "name": "wildernature:thick_leather",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 4
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -39,14 +39,14 @@
           "type": "minecraft:item",
           "weight": 18,
           "name": "minecraft:spruce_log",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 4,
                 "max": 12
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -54,14 +54,14 @@
           "type": "minecraft:item",
           "weight": 18,
           "name": "minecraft:birch_log",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 4,
                 "max": 12
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -69,14 +69,14 @@
           "type": "minecraft:item",
           "weight": 16,
           "name": "minecraft:oak_sapling",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 5
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -84,14 +84,14 @@
           "type": "minecraft:item",
           "weight": 16,
           "name": "minecraft:spruce_sapling",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 5
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -99,14 +99,14 @@
           "type": "minecraft:item",
           "weight": 16,
           "name": "minecraft:birch_sapling",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 5
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -114,14 +114,14 @@
           "type": "minecraft:item",
           "weight": 14,
           "name": "minecraft:sand",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 6,
                 "max": 16
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -129,14 +129,14 @@
           "type": "minecraft:item",
           "weight": 12,
           "name": "minecraft:clay_ball",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 4,
                 "max": 12
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -144,14 +144,14 @@
           "type": "minecraft:item",
           "weight": 10,
           "name": "minecraft:brick",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 6
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -159,14 +159,14 @@
           "type": "minecraft:item",
           "weight": 10,
           "name": "minecraft:glass",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 6
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -174,14 +174,14 @@
           "type": "minecraft:item",
           "weight": 12,
           "name": "minecraft:bread",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 5
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -189,14 +189,14 @@
           "type": "minecraft:item",
           "weight": 12,
           "name": "minecraft:carrot",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 6,
                 "max": 12
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -204,14 +204,14 @@
           "type": "minecraft:item",
           "weight": 12,
           "name": "minecraft:potato",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 6,
                 "max": 12
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -219,14 +219,14 @@
           "type": "minecraft:item",
           "weight": 10,
           "name": "minecraft:coal",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 4,
                 "max": 10
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -234,14 +234,14 @@
           "type": "minecraft:item",
           "weight": 6,
           "name": "minecraft:iron_ingot",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
                 "max": 4
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },
@@ -249,14 +249,14 @@
           "type": "minecraft:item",
           "weight": 4,
           "name": "minecraft:emerald",
-          "functions": [
+          "modifier": [
             {
-              "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 1,
                 "max": 2
-              }
+              },
+              "type": "minecraft:set_count"
             }
           ]
         },

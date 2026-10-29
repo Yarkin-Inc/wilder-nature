@@ -58,7 +58,7 @@ public class SwiftFoxGoals {
 
             if (this.swiftFox.distanceToSqr(this.targetPrey) < 2.2D && this.swiftFox.canStartAttackAnimation()) {
                 this.swiftFox.triggerAttackAnimation();
-                this.swiftFox.doHurtTarget(this.targetPrey);
+                this.swiftFox.doHurtTarget((net.minecraft.server.level.ServerLevel) this.swiftFox.level(), this.targetPrey);
             }
         }
 
@@ -75,7 +75,7 @@ public class SwiftFoxGoals {
 
         @Nullable
         private Animal findPrey() {
-            List<Animal> animals = this.swiftFox.level().getNearbyEntities(Animal.class, TargetingConditions.forNonCombat(), this.swiftFox, this.swiftFox.getBoundingBox().inflate(SEARCH_RANGE));
+            List<Animal> animals = ((net.minecraft.server.level.ServerLevel) this.swiftFox.level()).getNearbyEntities(Animal.class, TargetingConditions.forNonCombat(), this.swiftFox, this.swiftFox.getBoundingBox().inflate(SEARCH_RANGE));
             Animal closestAnimal = null;
             double closestDistance = Double.MAX_VALUE;
 
@@ -98,7 +98,7 @@ public class SwiftFoxGoals {
             if (!animal.isAlive() || animal.isBaby()) {
                 return false;
             }
-            if (!animal.getType().is(TagsRegistry.SWIFT_FOX_TARGETS)) {
+            if (!animal.is(TagsRegistry.SWIFT_FOX_TARGETS)) {
                 return false;
             }
             if (animal instanceof HedgehogEntity hedgehogEntity) {
@@ -326,7 +326,7 @@ public class SwiftFoxGoals {
             this.hideTicks++;
 
             if (this.swiftFox.level() instanceof ServerLevel serverLevel && this.hideTicks % 4 == 0) {
-                serverLevel.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, this.swiftFox.getMainHandItem()), this.hidePos.getX() + 0.5D, this.hidePos.getY() + 0.3D, this.hidePos.getZ() + 0.5D, 1, 0.08D, 0.03D, 0.08D, 0.0D);
+                serverLevel.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, net.minecraft.world.item.ItemStackTemplate.fromStack(this.swiftFox.getMainHandItem())), this.hidePos.getX() + 0.5D, this.hidePos.getY() + 0.3D, this.hidePos.getZ() + 0.5D, 1, 0.08D, 0.03D, 0.08D, 0.0D);
             }
 
             if (this.hideTicks >= 20) {
@@ -510,7 +510,7 @@ public class SwiftFoxGoals {
                 return false;
             }
 
-            List<Player> nearbyPlayers = this.swiftFox.level().getNearbyEntities(Player.class, TargetingConditions.forNonCombat(), this.swiftFox, this.swiftFox.getBoundingBox().inflate(6.0D));
+            List<Player> nearbyPlayers = ((net.minecraft.server.level.ServerLevel) this.swiftFox.level()).getNearbyEntities(Player.class, TargetingConditions.forNonCombat(), this.swiftFox, this.swiftFox.getBoundingBox().inflate(6.0D));
             for (Player player : nearbyPlayers) {
                 if (this.swiftFox.shouldAvoidPlayer(player)) {
                     return true;
@@ -525,7 +525,7 @@ public class SwiftFoxGoals {
                 return false;
             }
 
-            List<Player> nearbyPlayers = this.swiftFox.level().getNearbyEntities(Player.class, TargetingConditions.forNonCombat(), this.swiftFox, this.swiftFox.getBoundingBox().inflate(6.0D));
+            List<Player> nearbyPlayers = ((net.minecraft.server.level.ServerLevel) this.swiftFox.level()).getNearbyEntities(Player.class, TargetingConditions.forNonCombat(), this.swiftFox, this.swiftFox.getBoundingBox().inflate(6.0D));
             for (Player player : nearbyPlayers) {
                 if (this.swiftFox.shouldAvoidPlayer(player)) {
                     return true;

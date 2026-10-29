@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.HippoRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -13,7 +13,7 @@ import net.satisfy.wildernature.core.entity.animal.defensive.HippoEntity;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
-public class HippoModel<T extends HippoEntity> extends HierarchicalModel<T> {
+public class HippoModel<T extends HippoRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("hippo"), "main");
 
     private final ModelPart hippo;
@@ -21,6 +21,7 @@ public class HippoModel<T extends HippoEntity> extends HierarchicalModel<T> {
     private final ModelPart jaw;
 
     public HippoModel(ModelPart root) {
+        super(root);
         this.hippo = root.getChild("hippo");
         ModelPart tail = this.hippo.getChild("tail");
         this.hHead = this.hippo.getChild("h_head");
@@ -60,7 +61,12 @@ public class HippoModel<T extends HippoEntity> extends HierarchicalModel<T> {
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         this.hHead.yRot += netHeadYaw * ((float) Math.PI / 180F) * 0.35F;
@@ -68,12 +74,12 @@ public class HippoModel<T extends HippoEntity> extends HierarchicalModel<T> {
 
         boolean isMoving = limbSwingAmount > 0F;
 
-        if (!isMoving && !entity.isInWaterOrBubble() && !entity.isBiting() && !entity.isSnapping() && !entity.isThreatening() && !entity.isEating()) {
+        if (!isMoving && !entity.isInWater() && !entity.isBiting() && !entity.isSnapping() && !entity.isThreatening() && !entity.isEating()) {
             this.animate(entity.idleState, HippoAnimation.idle, ageInTicks, 1.0F);
         }
 
         if (isMoving) {
-            if (entity.isInWaterOrBubble()) {
+            if (entity.isInWater()) {
                 this.animateWalk(HippoAnimation.swim, limbSwing, limbSwingAmount, 2.0F, 2.5F);
             } else {
                 this.animateWalk(HippoAnimation.walk, limbSwing, limbSwingAmount, 2.5F, 2.5F);
@@ -87,15 +93,9 @@ public class HippoModel<T extends HippoEntity> extends HierarchicalModel<T> {
         this.animate(entity.threatState, HippoAnimation.threat, ageInTicks, 1.0F);
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.hippo.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.hippo;
-    }
+
+
 
     public ModelPart getRenderBody() {
         return this.hippo;

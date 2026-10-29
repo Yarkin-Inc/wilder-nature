@@ -23,10 +23,16 @@ public class WilderNatureUtil {
         private static final String TRUFFLED_KEY = "Truffled";
 
         public static boolean isTruffled(ItemStack itemStack) {
-            return itemStack.has(DataComponents.CUSTOM_DATA) && Objects.requireNonNull(itemStack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)).contains(TRUFFLED_KEY);
+            return itemStack.has(DataComponents.CUSTOM_DATA) && Objects.requireNonNull(itemStack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)).copyTag().contains(TRUFFLED_KEY);
         }
 
         public static ItemStack setTruffled(ItemStack itemStack) {
+            if (isTruffled(itemStack)) return itemStack;
+            var food = itemStack.get(DataComponents.FOOD);
+            if (food != null) {
+                itemStack.set(DataComponents.FOOD, new net.minecraft.world.food.FoodProperties(
+                        food.nutrition() + (int) (food.nutrition() * 0.2F), food.saturation() * 1.2F, food.canAlwaysEat()));
+            }
             CompoundTag tag = itemStack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
             tag.putBoolean(TRUFFLED_KEY, true);
             itemStack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));

@@ -99,21 +99,21 @@ public class RottenLogBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        this.termiteCount = tag.getInt("TermiteCount");
-        this.spreadCooldown = tag.getInt("SpreadCooldown");
-        this.infestationId = tag.getInt("InfestationId");
-        if (tag.contains("MoundX")) {
-            this.moundPos = new BlockPos(tag.getInt("MoundX"), tag.getInt("MoundY"), tag.getInt("MoundZ"));
+    public void loadAdditional(net.minecraft.world.level.storage.ValueInput tag) {
+        super.loadAdditional(tag);
+        this.termiteCount = tag.getIntOr("TermiteCount", 0);
+        this.spreadCooldown = tag.getIntOr("SpreadCooldown", 0);
+        this.infestationId = tag.getIntOr("InfestationId", 0);
+        if (tag.read("MoundX", com.mojang.serialization.Codec.INT).isPresent()) {
+            this.moundPos = new BlockPos(tag.getIntOr("MoundX", 0), tag.getIntOr("MoundY", 0), tag.getIntOr("MoundZ", 0));
         } else {
             this.moundPos = null;
         }
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput tag) {
+        super.saveAdditional(tag);
         tag.putInt("TermiteCount", this.termiteCount);
         tag.putInt("SpreadCooldown", this.spreadCooldown);
         tag.putInt("InfestationId", this.infestationId);

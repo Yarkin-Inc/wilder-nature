@@ -4,7 +4,7 @@ import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.Registrar;
 import dev.architectury.registry.registries.RegistrySupplier;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.satisfy.wildernature.WilderNature;
 
@@ -72,7 +72,7 @@ public class SoundEventRegistry {
     public static final RegistrySupplier<SoundEvent> BOUNTY_COMPLETED = create("bounty_completed");
 
     private static RegistrySupplier<SoundEvent> create(String name) {
-        final ResourceLocation id = WilderNature.identifier(name);
+        final Identifier id = WilderNature.identifier(name);
         return SOUND_EVENTS.register(id, () -> SoundEvent.createVariableRangeEvent(id));
     }
 

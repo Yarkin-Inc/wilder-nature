@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.SwiftFoxRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -19,12 +19,13 @@ import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 @Environment(EnvType.CLIENT)
-public class SwiftFoxModel<T extends SwiftFoxEntity> extends HierarchicalModel<T> {
+public class SwiftFoxModel<T extends SwiftFoxRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("swift_fox"), "main");
 
     private final ModelPart root;
 
     public SwiftFoxModel(ModelPart root) {
+        super(root);
         this.root = root;
         ModelPart swiftFox = root.getChild("swift_fox");
         ModelPart head = swiftFox.getChild("body").getChild("head");
@@ -59,7 +60,12 @@ public class SwiftFoxModel<T extends SwiftFoxEntity> extends HierarchicalModel<T
     }
 
     @Override
-    public void setupAnim(T swiftFoxEntity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T swiftFoxEntity) {
+        float limbSwing = swiftFoxEntity.walkAnimationPos;
+        float limbSwingAmount = swiftFoxEntity.walkAnimationSpeed;
+        float ageInTicks = swiftFoxEntity.ageInTicks;
+        float netHeadYaw = swiftFoxEntity.yRot;
+        float headPitch = swiftFoxEntity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         this.animateWalk(SwiftFoxAnimation.walk, limbSwing, limbSwingAmount, 2.0F, 2.5F);
@@ -73,13 +79,7 @@ public class SwiftFoxModel<T extends SwiftFoxEntity> extends HierarchicalModel<T
         }
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer buffer, int packedLight, int packedOverlay, int color) {
-        this.root.render(poseStack, buffer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.root;
-    }
+
+
 }

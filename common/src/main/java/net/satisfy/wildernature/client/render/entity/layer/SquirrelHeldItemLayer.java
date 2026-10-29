@@ -5,32 +5,29 @@ import com.mojang.math.Axis;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.satisfy.wildernature.client.model.entity.model.SquirrelModel;
-import net.satisfy.wildernature.core.entity.animal.neutral.SquirrelEntity;
+import net.satisfy.wildernature.client.render.state.SquirrelRenderState;
 
 @Environment(EnvType.CLIENT)
-public class SquirrelHeldItemLayer extends RenderLayer<SquirrelEntity, SquirrelModel> {
-    private final ItemInHandRenderer itemInHandRenderer;
-
-    public SquirrelHeldItemLayer(RenderLayerParent<SquirrelEntity, SquirrelModel> renderer, ItemInHandRenderer itemInHandRenderer) {
+public class SquirrelHeldItemLayer extends RenderLayer<SquirrelRenderState, SquirrelModel<SquirrelRenderState>> {
+public SquirrelHeldItemLayer(RenderLayerParent<SquirrelRenderState, SquirrelModel<SquirrelRenderState>> renderer) {
         super(renderer);
-        this.itemInHandRenderer = itemInHandRenderer;
     }
 
     @Override
-    public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, SquirrelEntity entity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
-        ItemStack itemStack = entity.getMainHandItem();
-        if (itemStack.isEmpty()) {
+    public void submit(PoseStack poseStack, SubmitNodeCollector buffer, int packedLight, SquirrelRenderState entity, float netHeadYaw, float headPitch) {
+        this.getParentModel().setupAnim(entity);
+        if (entity.heldItem.isEmpty()) {
             return;
         }
 
-        ModelPart rootPart = this.getParentModel().root();
+        ModelPart rootPart = this.getParentModel().root().getChild("squirrel");
         ModelPart hipsPart = rootPart.getChild("hips");
         ModelPart torsoPart = hipsPart.getChild("torso");
         ModelPart headPart = torsoPart.getChild("h_head");
@@ -46,12 +43,12 @@ public class SquirrelHeldItemLayer extends RenderLayer<SquirrelEntity, SquirrelM
         }
 
         poseStack.translate(0.0F, 0.1F, -0.45F);
-        poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
-        poseStack.mulPose(Axis.ZN.rotationDegrees(33.0F));
-        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+        poseStack.rotate(Axis.XP.rotationDegrees(-90.0F));
+        poseStack.rotate(Axis.ZN.rotationDegrees(33.0F));
+        poseStack.rotate(Axis.YP.rotationDegrees(180.0F));
         poseStack.scale(0.4F, 0.4F, 0.4F);
 
-        this.itemInHandRenderer.renderItem(entity, itemStack, ItemDisplayContext.FIXED, false, poseStack, buffer, packedLight);
+        entity.heldItem.submit(poseStack, buffer, packedLight, OverlayTexture.NO_OVERLAY, entity.outlineColor);
         poseStack.popPose();
     }
 }

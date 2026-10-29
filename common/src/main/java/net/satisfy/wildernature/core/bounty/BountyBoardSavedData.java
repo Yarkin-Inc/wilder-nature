@@ -19,8 +19,7 @@ public class BountyBoardSavedData extends SavedData {
 
     public static BountyBoardSavedData get(ServerLevel serverLevel) {
         return serverLevel.getServer().overworld().getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(BountyBoardSavedData::new, BountyBoardSavedData::load, null),
-                DATA_NAME
+                new net.minecraft.world.level.saveddata.SavedDataType<>(net.satisfy.wildernature.WilderNature.identifier(DATA_NAME), BountyBoardSavedData::new, CompoundTag.CODEC.xmap(BountyBoardSavedData::load, data -> data.save(new CompoundTag())), null)
         );
     }
 
@@ -41,7 +40,7 @@ public class BountyBoardSavedData extends SavedData {
     }
 
     public void ensureCurrentBounties(ServerLevel serverLevel) {
-        long day = serverLevel.getDayTime() / (24000L * BOUNTY_CYCLE_DAYS);
+        long day = serverLevel.getOverworldClockTime() / (24000L * BOUNTY_CYCLE_DAYS);
 
         if (day != this.currentDay || this.dailyBounties.isEmpty()) {
             this.currentDay = day;
@@ -75,8 +74,7 @@ public class BountyBoardSavedData extends SavedData {
         return this.dailyBounties.stream().filter(bountyDefinition -> bountyDefinition.id().equals(bountyId)).findFirst();
     }
 
-    @Override
-    public @NotNull CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+    public @NotNull CompoundTag save(CompoundTag tag) {
         tag.putLong("current_day", this.currentDay);
         tag.putInt("daily_bounty_size", this.dailyBounties.size());
 
@@ -89,7 +87,7 @@ public class BountyBoardSavedData extends SavedData {
         int playerIndex = 0;
         for (Map.Entry<UUID, PlayerBountyData> entry : this.playerBountyDataMap.entrySet()) {
             CompoundTag playerTag = new CompoundTag();
-            playerTag.putUUID("player_id", entry.getKey());
+            playerTag.store("player_id", net.minecraft.core.UUIDUtil.CODEC, entry.getKey());
             playerTag.put("data", entry.getValue().save());
             tag.put("player_bounty_data_" + playerIndex, playerTag);
             playerIndex++;
@@ -98,23 +96,23 @@ public class BountyBoardSavedData extends SavedData {
         return tag;
     }
 
-    public static BountyBoardSavedData load(CompoundTag tag, HolderLookup.Provider provider) {
+    public static BountyBoardSavedData load(CompoundTag tag) {
         BountyBoardSavedData savedData = new BountyBoardSavedData();
 
         if (tag.contains("current_day")) {
-            savedData.currentDay = tag.getLong("current_day");
+            savedData.currentDay = tag.getLongOr("current_day", 0L);
         }
 
-        int dailyBountySize = tag.getInt("daily_bounty_size");
+        int dailyBountySize = tag.getIntOr("daily_bounty_size", 0);
         for (int index = 0; index < dailyBountySize; index++) {
-            savedData.dailyBounties.add(BountyDefinition.load(tag.getCompound("daily_bounty_" + index)));
+            savedData.dailyBounties.add(BountyDefinition.load(tag.getCompoundOrEmpty("daily_bounty_" + index)));
         }
 
-        int playerBountyDataSize = tag.getInt("player_bounty_data_size");
+        int playerBountyDataSize = tag.getIntOr("player_bounty_data_size", 0);
         for (int index = 0; index < playerBountyDataSize; index++) {
-            CompoundTag playerTag = tag.getCompound("player_bounty_data_" + index);
-            UUID playerId = playerTag.getUUID("player_id");
-            PlayerBountyData playerBountyData = PlayerBountyData.load(playerTag.getCompound("data"));
+            CompoundTag playerTag = tag.getCompoundOrEmpty("player_bounty_data_" + index);
+            UUID playerId = playerTag.read("player_id", net.minecraft.core.UUIDUtil.CODEC).orElseThrow();
+            PlayerBountyData playerBountyData = PlayerBountyData.load(playerTag.getCompoundOrEmpty("data"));
             savedData.playerBountyDataMap.put(playerId, playerBountyData);
         }
 

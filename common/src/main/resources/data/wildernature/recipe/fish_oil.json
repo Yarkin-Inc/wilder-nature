@@ -1,12 +1,8 @@
 {
   "type": "minecraft:crafting_shapeless",
   "ingredients": [
-    {
-      "tag": "minecraft:fishes"
-    },
-    {
-      "tag": "minecraft:fishes"
-    }
+    "#minecraft:fishes",
+    "#minecraft:fishes"
   ],
   "result": {
     "id": "wildernature:fish_oil",

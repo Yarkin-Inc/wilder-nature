@@ -1,14 +1,14 @@
 package net.satisfy.wildernature.core.entity.ai.goal.animal;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.satisfy.wildernature.platform.PlatformHelper;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.item.AxeItem;
+import net.satisfy.wildernature.core.util.StrippableLogs;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.LightLayer;
@@ -173,7 +173,7 @@ public class BeaverGoals {
                 return;
             }
 
-            if (!(this.currentLog.getItem() instanceof BlockItem blockItem) || !AxeItem.STRIPPABLES.containsKey(blockItem.getBlock())) {
+            if (!(this.currentLog.getItem() instanceof BlockItem blockItem) || !StrippableLogs.blocks().containsKey(blockItem.getBlock())) {
                 this.returnLogToInventory();
                 this.state = State.IDLE;
                 return;
@@ -206,7 +206,7 @@ public class BeaverGoals {
             }
 
             if (this.gnawTicksElapsed % 8 == 0) {
-                this.beaver.playSound(SoundEvents.AXE_STRIP, 0.5F, 0.9F + this.beaver.getRandom().nextFloat() * 0.2F);
+                this.beaver.playSound(SoundEvents.AXE_STRIP.value(), 0.5F, 0.9F + this.beaver.getRandom().nextFloat() * 0.2F);
             }
 
             if (!this.strippedPlacedLog && this.gnawTicksElapsed >= STRIP_AT_TICK && this.beaver.level() instanceof ServerLevel serverLevel) {
@@ -226,7 +226,7 @@ public class BeaverGoals {
 
                 if (this.currentLog != null && !this.currentLog.isEmpty()) {
                     if (!this.beaver.storeOneItem(this.currentLog)) {
-                        this.beaver.spawnAtLocation(this.currentLog);
+                        this.beaver.spawnAtLocation((net.minecraft.server.level.ServerLevel) this.beaver.level(), this.currentLog);
                     }
                     this.currentLog = null;
                 }
@@ -443,7 +443,7 @@ public class BeaverGoals {
 
         @Override
         public boolean canUse() {
-            if (!PlatformHelper.isBeaverDamsEnabled() || !this.beaver.level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) {
+            if (!PlatformHelper.isBeaverDamsEnabled() || !((net.minecraft.server.level.ServerLevel) this.beaver.level()).getGameRules().get(GameRules.MOB_GRIEFING)) {
                 return false;
             }
             if (this.beaver.isGnawing() || !this.beaver.hasRawLogs() || this.beaver.getDamCooldownTicks() > 0) {

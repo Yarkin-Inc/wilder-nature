@@ -1,9 +1,7 @@
 {
   "type": "minecraft:crafting_shaped",
   "key": {
-    "B": {
-      "item": "wildernature:truffle"
-    }
+    "B": "wildernature:truffle"
   },
   "pattern": [
     "BBB",

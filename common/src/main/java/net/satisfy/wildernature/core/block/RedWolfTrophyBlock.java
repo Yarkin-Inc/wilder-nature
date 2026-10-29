@@ -1,7 +1,7 @@
 package net.satisfy.wildernature.core.block;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -68,7 +68,7 @@ public class RedWolfTrophyBlock extends WallDecorationBlock {
 
     @Override
     protected @NotNull InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
-        if (world.isClientSide) {
+        if (world.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
 
@@ -102,7 +102,7 @@ public class RedWolfTrophyBlock extends WallDecorationBlock {
 
             GlowingBlock glowEntity = new GlowingBlock(EntityTypeRegistry.GLOWING_BLOCK.get(), world);
             glowEntity.setGlowColor(color);
-            glowEntity.moveTo(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5, 0, 0);
+            glowEntity.snapTo(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5, 0, 0);
             world.addFreshEntity(glowEntity);
 
             String teamName = "glow_" + Integer.toHexString(color);
@@ -110,7 +110,7 @@ public class RedWolfTrophyBlock extends WallDecorationBlock {
             PlayerTeam team = scoreboard.getPlayerTeam(teamName);
             if (team == null) {
                 team = scoreboard.addPlayerTeam(teamName);
-                team.setColor(resolveTextColor(color));
+                team.setColor(java.util.Optional.of(net.minecraft.world.scores.TeamColor.valueOf(resolveTextColor(color).name())));
             }
             scoreboard.addPlayerToTeam(glowEntity.getStringUUID(), team);
         }

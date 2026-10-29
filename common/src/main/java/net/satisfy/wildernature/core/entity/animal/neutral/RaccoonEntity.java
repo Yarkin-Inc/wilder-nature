@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.neutral;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
@@ -9,7 +11,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.BlockTags;
@@ -27,12 +29,12 @@ import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.IronGolem;
-import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.animal.golem.IronGolem;
+import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
@@ -50,7 +52,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class RaccoonEntity extends Animal implements CacheStoringMob, ShelteringMob, CacheEatingMob {
-    private static final Ingredient FOOD_ITEMS = Ingredient.of(TagsRegistry.RACCOON_FOOD);
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOOD_ITEMS = (stack -> stack.is(TagsRegistry.RACCOON_FOOD));
     private static final EntityDataAccessor<Integer> DATA_FLAGS_ID = SynchedEntityData.defineId(RaccoonEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_SLEEPING = SynchedEntityData.defineId(RaccoonEntity.class, EntityDataSerializers.BOOLEAN);
 
@@ -86,7 +88,7 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
     public static final int CACHE_TO_CHEST_COOLDOWN_MIN = 8000;
     public static final int CACHE_TO_CHEST_COOLDOWN_MAX = 14000;
 
-    public static final AttributeModifier DOOR_DO_NOT_MOVE_MODIFIER = new AttributeModifier(ResourceLocation.parse("wildernature:raccoon_door_do_not_move"), -1000.0D, AttributeModifier.Operation.ADD_VALUE);
+    public static final AttributeModifier DOOR_DO_NOT_MOVE_MODIFIER = new AttributeModifier(Identifier.parse("wildernature:raccoon_door_do_not_move"), -1000.0D, AttributeModifier.Operation.ADD_VALUE);
 
     public final AnimationState walkState = new AnimationState();
     public final AnimationState runState = new AnimationState();
@@ -113,7 +115,7 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MOVEMENT_SPEED, 0.275D)
                 .add(Attributes.MAX_HEALTH, 6.0D)
                 .add(Attributes.ATTACK_DAMAGE, 1.5D);
@@ -165,8 +167,8 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
             this.cacheToChestCooldownTicks--;
         }
 
-        if (!this.level().isClientSide) {
-            boolean isCurrentlyDay = this.level().isDay();
+        if (!this.level().isClientSide()) {
+            boolean isCurrentlyDay = this.level().isBrightOutside();
 
             if (this.wasDay && !isCurrentlyDay) {
                 this.cropsNibbledThisNight = 0;
@@ -189,7 +191,7 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
 
     @Override
     public void aiStep() {
-        if (!this.level().isClientSide && this.isAlive() && this.isEffectiveAi()) {
+        if (!this.level().isClientSide() && this.isAlive() && this.isEffectiveAi()) {
             this.stopWash();
         }
 
@@ -217,12 +219,12 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
         GroundPathNavigation groundPathNavigation = new GroundPathNavigation(this, level);
         groundPathNavigation.setCanFloat(true);
         groundPathNavigation.setCanOpenDoors(true);
-        groundPathNavigation.setCanPassDoors(true);
+        groundPathNavigation.getNodeEvaluator().setCanPassDoors(true);
         return groundPathNavigation;
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compoundTag) {
+    public void addAdditionalSaveData(ValueOutput compoundTag) {
         super.addAdditionalSaveData(compoundTag);
         compoundTag.putInt("RaccoonFlags", this.entityData.get(DATA_FLAGS_ID));
         compoundTag.putInt("ContainerLootCooldown", this.containerLootCooldownTicks);
@@ -235,41 +237,41 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
         compoundTag.putInt("MaxCropsToNibbleThisNight", this.maxCropsToNibbleThisNight);
         compoundTag.putBoolean("Sleeping", this.isSleeping());
         compoundTag.putBoolean("WasDay", this.wasDay);
-        ContainerHelper.saveAllItems(compoundTag, this.raccoonInventory, this.registryAccess());
+        ContainerHelper.saveAllItems(compoundTag, this.raccoonInventory);
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compoundTag) {
+    public void readAdditionalSaveData(ValueInput compoundTag) {
         super.readAdditionalSaveData(compoundTag);
-        this.entityData.set(DATA_FLAGS_ID, compoundTag.getInt("RaccoonFlags"));
-        this.containerLootCooldownTicks = compoundTag.getInt("ContainerLootCooldown");
-        this.storeLootCooldownTicks = compoundTag.getInt("StoreLootCooldown");
-        this.cacheToChestCooldownTicks = compoundTag.getInt("CacheToChestCooldown");
-        this.setSleeping(compoundTag.getBoolean("Sleeping"));
-        this.sleepPreparationTicks = compoundTag.getInt("SleepPreparationTicks");
-        this.requiredSleepPreparationTicks = compoundTag.contains("RequiredSleepPreparationTicks")
-                ? compoundTag.getInt("RequiredSleepPreparationTicks")
+        this.entityData.set(DATA_FLAGS_ID, compoundTag.getIntOr("RaccoonFlags", 0));
+        this.containerLootCooldownTicks = compoundTag.getIntOr("ContainerLootCooldown", 0);
+        this.storeLootCooldownTicks = compoundTag.getIntOr("StoreLootCooldown", 0);
+        this.cacheToChestCooldownTicks = compoundTag.getIntOr("CacheToChestCooldown", 0);
+        this.setSleeping(compoundTag.getBooleanOr("Sleeping", false));
+        this.sleepPreparationTicks = compoundTag.getIntOr("SleepPreparationTicks", 0);
+        this.requiredSleepPreparationTicks = compoundTag.read("RequiredSleepPreparationTicks", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()
+                ? compoundTag.getIntOr("RequiredSleepPreparationTicks", 0)
                 : SLEEP_PREPARATION_MIN + this.random.nextInt(SLEEP_PREPARATION_MAX - SLEEP_PREPARATION_MIN + 1);
-        this.sleepCooldownTicks = compoundTag.getInt("SleepCooldownTicks");
-        this.cropsNibbledThisNight = compoundTag.getInt("CropsNibbledThisNight");
-        this.maxCropsToNibbleThisNight = compoundTag.contains("MaxCropsToNibbleThisNight")
-                ? compoundTag.getInt("MaxCropsToNibbleThisNight")
+        this.sleepCooldownTicks = compoundTag.getIntOr("SleepCooldownTicks", 0);
+        this.cropsNibbledThisNight = compoundTag.getIntOr("CropsNibbledThisNight", 0);
+        this.maxCropsToNibbleThisNight = compoundTag.read("MaxCropsToNibbleThisNight", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()
+                ? compoundTag.getIntOr("MaxCropsToNibbleThisNight", 0)
                 : CROPS_NIBBLED_PER_NIGHT_MIN + this.random.nextInt(CROPS_NIBBLED_PER_NIGHT_MAX - CROPS_NIBBLED_PER_NIGHT_MIN + 1);
-        this.wasDay = compoundTag.contains("WasDay") ? compoundTag.getBoolean("WasDay") : this.level().isDay();
+        this.wasDay = compoundTag.read("WasDay", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() ? compoundTag.getBooleanOr("WasDay", false) : this.level().isBrightOutside();
         this.raccoonInventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(compoundTag, this.raccoonInventory, this.registryAccess());
+        ContainerHelper.loadAllItems(compoundTag, this.raccoonInventory);
     }
 
     @Nullable
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, net.minecraft.world.DifficultyInstance difficulty, net.minecraft.world.entity.MobSpawnType spawnType, @Nullable SpawnGroupData spawnGroupData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, net.minecraft.world.DifficultyInstance difficulty, net.minecraft.world.entity.EntitySpawnReason spawnType, @Nullable SpawnGroupData spawnGroupData) {
         return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
     }
 
     @Nullable
     @Override
     public RaccoonEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.RACCOON.get().create(serverLevel);
+        return EntityTypeRegistry.RACCOON.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -352,7 +354,7 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
                 double velocityX = (this.random.nextDouble() - 0.5D) * 0.08D;
                 double velocityY = this.random.nextDouble() * 0.08D;
                 double velocityZ = (this.random.nextDouble() - 0.5D) * 0.08D;
-                serverLevel.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, itemStack), this.getX() + offsetX, this.getY() + offsetY, this.getZ() + offsetZ, 1, velocityX, velocityY, velocityZ, 0.0D);
+                serverLevel.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, net.minecraft.world.item.ItemStackTemplate.fromStack(itemStack)), this.getX() + offsetX, this.getY() + offsetY, this.getZ() + offsetZ, 1, velocityX, velocityY, velocityZ, 0.0D);
             }
         }
     }
@@ -400,8 +402,8 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
 
     public boolean canLootContainers() {
         return this.level() instanceof ServerLevel serverLevel
-                && !this.level().isDay()
-                && serverLevel.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
+                && !this.level().isBrightOutside()
+                && serverLevel.getGameRules().get(GameRules.MOB_GRIEFING)
                 && this.containerLootCooldownTicks <= 0
                 && this.cacheToChestCooldownTicks <= 0
                 && !this.isSleeping()
@@ -559,14 +561,14 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
 
     public void startOpenDoorAnim() {
         this.setFlag(FLAG_OPEN_DOOR, true);
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             this.openDoorState.start(this.tickCount);
         }
     }
 
     public void stopOpenDoorAnim() {
         this.setFlag(FLAG_OPEN_DOOR, false);
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             this.openDoorState.stop();
         }
     }
@@ -584,12 +586,12 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
                 && !this.isStoringLoot()
                 && !this.isBaby()
                 && !this.isSleeping()
-                && this.level().isDay();
+                && this.level().isBrightOutside();
     }
 
     @Override
     public boolean canContinueShelterGoal() {
-        return this.level().isDay()
+        return this.level().isBrightOutside()
                 && !this.isPanicking()
                 && !this.isSleeping();
     }
@@ -644,7 +646,7 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
             this.sleepCooldownTicks--;
         }
 
-        boolean isDay = this.level().isDay();
+        boolean isDay = this.level().isBrightOutside();
         boolean isStill = this.getDeltaMovement().horizontalDistanceSqr() < 1.0E-4D;
         boolean isInShelterArea = this.isInShelterRestArea();
 
@@ -716,7 +718,7 @@ public class RaccoonEntity extends Animal implements CacheStoringMob, Sheltering
     }
 
     private boolean hasWakeUpTriggerNearby() {
-        if (!this.level().isDay()) {
+        if (!this.level().isBrightOutside()) {
             return true;
         }
 

@@ -9,7 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -26,26 +26,26 @@ public class ExperienceBurstItem extends Item {
     }
 
     @Override
-    public @NotNull InteractionResultHolder<ItemStack> use(Level level, net.minecraft.world.entity.player.Player player, InteractionHand interactionHand) {
+    public @NotNull InteractionResult use(Level level, net.minecraft.world.entity.player.Player player, InteractionHand interactionHand) {
         ItemStack itemStack = player.getItemInHand(interactionHand);
         if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
             int experienceAmount = this.getExperienceAmount(itemStack);
             if (experienceAmount > 0) {
-                this.spawnUseEffect(serverPlayer.serverLevel(), serverPlayer);
+                this.spawnUseEffect(serverPlayer.level(), serverPlayer);
                 serverPlayer.giveExperiencePoints(experienceAmount);
-                serverPlayer.serverLevel().playSound(null, serverPlayer.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.65F, 1.65F);
+                serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.65F, 1.65F);
                 itemStack.shrink(1);
             }
         }
 
-        return InteractionResultHolder.sidedSuccess(itemStack, level.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    public void appendHoverText(ItemStack itemStack, Item.TooltipContext tooltipContext, List<Component> list, TooltipFlag tooltipFlag) {
+    public void appendHoverText(ItemStack itemStack, Item.TooltipContext tooltipContext, net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> list, TooltipFlag tooltipFlag) {
         int experienceAmount = this.getExperienceAmount(itemStack);
         if (experienceAmount > 0) {
-            list.add(
+            list.accept(
                     Component.translatable("tooltip.wildernature.burst_of_experience.use")
                             .append(Component.literal(" "))
                             .append(
@@ -67,7 +67,7 @@ public class ExperienceBurstItem extends Item {
         }
 
         CompoundTag customDataTag = customData.copyTag();
-        return customDataTag.getInt("ExperienceAmount");
+        return customDataTag.getIntOr("ExperienceAmount", 0);
     }
 
     private void spawnUseEffect(ServerLevel level, ServerPlayer serverPlayer) {

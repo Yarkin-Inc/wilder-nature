@@ -118,7 +118,7 @@ public class PlayerBountyData {
 
         int abandonedIndex = 0;
         for (UUID bountyId : this.abandonedBounties) {
-            compoundTag.putUUID("abandoned_" + abandonedIndex, bountyId);
+            compoundTag.store("abandoned_" + abandonedIndex, net.minecraft.core.UUIDUtil.CODEC, bountyId);
             abandonedIndex++;
         }
 
@@ -130,18 +130,18 @@ public class PlayerBountyData {
         PlayerBountyData playerBountyData = new PlayerBountyData();
 
         if (compoundTag.contains("active_bounty")) {
-            playerBountyData.activeBounty = BountyDefinition.load(compoundTag.getCompound("active_bounty"));
-            playerBountyData.currentProgress = compoundTag.getInt("current_progress");
-            playerBountyData.trackedStartAmount = compoundTag.getInt("tracked_start_amount");
-            playerBountyData.trackedHighestAmount = compoundTag.getInt("tracked_highest_amount");
-            playerBountyData.rewardsUnlocked = compoundTag.getBoolean("rewards_unlocked");
-            playerBountyData.itemRewardClaimed = compoundTag.getBoolean("item_reward_claimed");
-            playerBountyData.experienceRewardClaimed = compoundTag.getBoolean("experience_reward_claimed");
+            playerBountyData.activeBounty = BountyDefinition.load(compoundTag.getCompoundOrEmpty("active_bounty"));
+            playerBountyData.currentProgress = compoundTag.getIntOr("current_progress", 0);
+            playerBountyData.trackedStartAmount = compoundTag.getIntOr("tracked_start_amount", 0);
+            playerBountyData.trackedHighestAmount = compoundTag.getIntOr("tracked_highest_amount", 0);
+            playerBountyData.rewardsUnlocked = compoundTag.getBooleanOr("rewards_unlocked", false);
+            playerBountyData.itemRewardClaimed = compoundTag.getBooleanOr("item_reward_claimed", false);
+            playerBountyData.experienceRewardClaimed = compoundTag.getBooleanOr("experience_reward_claimed", false);
         }
 
-        int abandonedSize = compoundTag.getInt("abandoned_size");
+        int abandonedSize = compoundTag.getIntOr("abandoned_size", 0);
         for (int index = 0; index < abandonedSize; index++) {
-            playerBountyData.abandonedBounties.add(compoundTag.getUUID("abandoned_" + index));
+            playerBountyData.abandonedBounties.add(compoundTag.read("abandoned_" + index, net.minecraft.core.UUIDUtil.CODEC).orElseThrow());
         }
 
         return playerBountyData;

@@ -16,17 +16,17 @@ public class HuntersSenseEffect extends MobEffect {
     }
 
     @Override
-    public void onMobHurt(LivingEntity entity, int amplifier, DamageSource source, float amount) {
+    public void onMobHurt(net.minecraft.server.level.ServerLevel effectLevel, LivingEntity entity, int amplifier, DamageSource source, float amount) {
         if (source.getEntity() instanceof LivingEntity attacker) {
             if (attacker.hasEffect(MobEffectRegistry.huntersSenseHolder()) &&
                     entity.hasEffect(MobEffectRegistry.markedPreyHolder())) {
-                entity.hurt(source, amount * DAMAGE_BONUS);
+                entity.hurtOrSimulate(source, amount * DAMAGE_BONUS);
             }
         }
     }
 
     @Override
-    public boolean applyEffectTick(LivingEntity entity, int amplifier) {
+    public boolean applyEffectTick(net.minecraft.server.level.ServerLevel effectLevel, LivingEntity entity, int amplifier) {
         return true;
     }
 

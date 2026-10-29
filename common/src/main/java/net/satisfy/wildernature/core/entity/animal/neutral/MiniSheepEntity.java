@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.neutral;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -105,7 +107,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
                 return !MiniSheepEntity.this.isMiniSheepSleeping() && !MiniSheepEntity.this.isFleeing() && !MiniSheepEntity.this.isMaehAnimating() && super.canContinueToUse();
             }
         });
-        this.goalSelector.addGoal(4, new TemptGoal(this, 1.1D, Ingredient.of(TagsRegistry.MINISHEEP_FOOD), false) {
+        this.goalSelector.addGoal(4, new TemptGoal(this, 1.1D, (stack -> stack.is(TagsRegistry.MINISHEEP_FOOD)), false) {
             @Override
             public boolean canUse() {
                 return !MiniSheepEntity.this.isMiniSheepSleeping() && !MiniSheepEntity.this.isFleeing() && !MiniSheepEntity.this.isMaehAnimating() && super.canUse();
@@ -344,7 +346,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
             return;
         }
 
-        boolean isNight = !this.level().isDay();
+        boolean isNight = !this.level().isBrightOutside();
         boolean isStill = this.getDeltaMovement().horizontalDistanceSqr() < 0.01D;
         boolean isOnGrassBlock = this.level().getBlockState(this.blockPosition().below()).is(Blocks.GRASS_BLOCK);
 
@@ -577,8 +579,8 @@ public class MiniSheepEntity extends Animal implements Shearable {
     }
 
     @Override
-    protected void customServerAiStep() {
-        super.customServerAiStep();
+    protected void customServerAiStep(ServerLevel serverLevel) {
+        super.customServerAiStep(serverLevel);
         this.eatAnimationTick = this.eatBlockGoal.getEatAnimationTick();
         if (this.eatAnimationTick > 0) {
             this.level().broadcastEntityEvent(this, (byte) 10);
@@ -601,7 +603,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
         } else {
             animationSpeed = 0.0F;
         }
-        this.walkAnimation.update(animationSpeed, 0.2F);
+        this.walkAnimation.update(animationSpeed, 0.2F, 1.0F);
     }
 
     public void setSheared(boolean sheared) {
@@ -614,7 +616,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
 
     @Override
     public void aiStep() {
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             this.eatAnimationTick = Math.max(0, this.eatAnimationTick - 1);
             this.maehAnimationTick = Math.max(0, this.maehAnimationTick - 1);
         }
@@ -622,7 +624,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Mob.createMobAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MAX_HEALTH, 10.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.24D)
                 .add(Attributes.FOLLOW_RANGE, 24.0D);
@@ -662,7 +664,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
     @Nullable
     @Override
     public MiniSheepEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.MINISHEEP.get().create(serverLevel);
+        return EntityTypeRegistry.MINISHEEP.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -672,7 +674,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
         if (this.isBaby()) {
             this.ageUp(60);
         }
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             BlockPos blockPos = this.blockPosition().below();
             BlockState blockState = this.level().getBlockState(blockPos);
             if (!blockState.isAir()) {
@@ -684,7 +686,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
 
     @Nullable
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficultyInstance, MobSpawnType mobSpawnType, @Nullable SpawnGroupData spawnGroupData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficultyInstance, EntitySpawnReason mobSpawnType, @Nullable SpawnGroupData spawnGroupData) {
         SpawnGroupData finalizedSpawnData = super.finalizeSpawn(serverLevelAccessor, difficultyInstance, mobSpawnType, spawnGroupData);
         this.isLeader = this.random.nextFloat() < 0.3F;
         this.meadowHomePos = this.blockPosition().immutable();
@@ -699,7 +701,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
     public @NotNull InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack itemStack = player.getItemInHand(hand);
         if (itemStack.getItem() instanceof ShearsItem && this.readyForShearing()) {
-            this.shear(SoundSource.PLAYERS);
+            if (level() instanceof ServerLevel shearLevel) this.shear(shearLevel, SoundSource.PLAYERS, itemStack);
             itemStack.hurtAndBreak(1, player, player.getEquipmentSlotForItem(player.getItemInHand(hand)));
             return InteractionResult.SUCCESS;
         }
@@ -707,7 +709,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
     }
 
     @Override
-    public void shear(@NotNull SoundSource shearedSoundCategory) {
+    public void shear(ServerLevel shearLevel, @NotNull SoundSource shearedSoundCategory, ItemStack shears) {
         this.level().playSound(null, this, SoundEvents.SHEEP_SHEAR, shearedSoundCategory, 1.0F, 1.0F);
         this.setSheared(true);
         this.level().broadcastEntityEvent(this, (byte) 11);
@@ -718,7 +720,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
 
         int woolCount = 2 + this.random.nextInt(3);
         for (int woolIndex = 0; woolIndex < woolCount; ++woolIndex) {
-            ItemEntity itemEntity = this.spawnAtLocation(Items.WHITE_WOOL, 1);
+            ItemEntity itemEntity = this.spawnAtLocation((net.minecraft.server.level.ServerLevel) level(), new ItemStack(Items.WOOL.white()), 1.0F);
             if (itemEntity != null) {
                 itemEntity.setDeltaMovement(itemEntity.getDeltaMovement().add((this.random.nextFloat() - this.random.nextFloat()) * 0.1F, this.random.nextFloat() * 0.05F, (this.random.nextFloat() - this.random.nextFloat()) * 0.1F));
             }
@@ -731,8 +733,8 @@ public class MiniSheepEntity extends Animal implements Shearable {
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float amount) {
-        boolean wasHurt = super.hurt(damageSource, amount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float amount) {
+        boolean wasHurt = super.hurtServer(serverLevel, damageSource, amount);
 
         if (!wasHurt) {
             return false;
@@ -750,7 +752,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compoundTag) {
+    public void addAdditionalSaveData(ValueOutput compoundTag) {
         super.addAdditionalSaveData(compoundTag);
         compoundTag.putBoolean("Sheared", this.isSheared());
         compoundTag.putBoolean("Sleeping", this.isMiniSheepSleeping());
@@ -763,7 +765,7 @@ public class MiniSheepEntity extends Animal implements Shearable {
         compoundTag.putInt("FleeTicks", this.fleeTicks);
         compoundTag.putInt("ShearCalmTicks", this.shearCalmTicks);
         if (this.herdLeaderUUID != null) {
-            compoundTag.putUUID("HerdLeaderUUID", this.herdLeaderUUID);
+            compoundTag.store("HerdLeaderUUID", net.minecraft.core.UUIDUtil.CODEC, this.herdLeaderUUID);
         }
         if (this.meadowHomePos != null) {
             compoundTag.putInt("MeadowHomePosX", this.meadowHomePos.getX());
@@ -778,31 +780,31 @@ public class MiniSheepEntity extends Animal implements Shearable {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compoundTag) {
+    public void readAdditionalSaveData(ValueInput compoundTag) {
         super.readAdditionalSaveData(compoundTag);
-        this.setSheared(compoundTag.getBoolean("Sheared"));
-        this.setMiniSheepSleeping(compoundTag.getBoolean("Sleeping"));
-        this.setMiniSheepRunning(compoundTag.getBoolean("Running"));
-        this.isLeader = compoundTag.getBoolean("IsLeader");
-        this.sleepPreparationTicks = compoundTag.getInt("SleepPreparationTicks");
-        this.requiredSleepPreparationTicks = compoundTag.contains("RequiredSleepPreparationTicks") ? compoundTag.getInt("RequiredSleepPreparationTicks") : 100 + this.random.nextInt(120);
-        this.sleepCooldownTicks = compoundTag.getInt("SleepCooldownTicks");
-        this.returningHome = compoundTag.getBoolean("ReturningHome");
-        this.fleeTicks = compoundTag.getInt("FleeTicks");
-        this.shearCalmTicks = compoundTag.getInt("ShearCalmTicks");
-        this.herdLeaderUUID = compoundTag.hasUUID("HerdLeaderUUID") ? compoundTag.getUUID("HerdLeaderUUID") : null;
+        this.setSheared(compoundTag.getBooleanOr("Sheared", false));
+        this.setMiniSheepSleeping(compoundTag.getBooleanOr("Sleeping", false));
+        this.setMiniSheepRunning(compoundTag.getBooleanOr("Running", false));
+        this.isLeader = compoundTag.getBooleanOr("IsLeader", false);
+        this.sleepPreparationTicks = compoundTag.getIntOr("SleepPreparationTicks", 0);
+        this.requiredSleepPreparationTicks = compoundTag.read("RequiredSleepPreparationTicks", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() ? compoundTag.getIntOr("RequiredSleepPreparationTicks", 0) : 100 + this.random.nextInt(120);
+        this.sleepCooldownTicks = compoundTag.getIntOr("SleepCooldownTicks", 0);
+        this.returningHome = compoundTag.getBooleanOr("ReturningHome", false);
+        this.fleeTicks = compoundTag.getIntOr("FleeTicks", 0);
+        this.shearCalmTicks = compoundTag.getIntOr("ShearCalmTicks", 0);
+        this.herdLeaderUUID = compoundTag.read("HerdLeaderUUID", net.minecraft.core.UUIDUtil.CODEC).isPresent() ? compoundTag.read("HerdLeaderUUID", net.minecraft.core.UUIDUtil.CODEC).orElse(null) : null;
         this.cachedLeader = null;
         this.leaderCacheCooldown = 0;
         this.herdCheckCooldown = 0;
 
-        if (compoundTag.contains("MeadowHomePosX") && compoundTag.contains("MeadowHomePosY") && compoundTag.contains("MeadowHomePosZ")) {
-            this.meadowHomePos = new BlockPos(compoundTag.getInt("MeadowHomePosX"), compoundTag.getInt("MeadowHomePosY"), compoundTag.getInt("MeadowHomePosZ"));
+        if (compoundTag.read("MeadowHomePosX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compoundTag.read("MeadowHomePosY", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compoundTag.read("MeadowHomePosZ", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.meadowHomePos = new BlockPos(compoundTag.getIntOr("MeadowHomePosX", 0), compoundTag.getIntOr("MeadowHomePosY", 0), compoundTag.getIntOr("MeadowHomePosZ", 0));
         } else {
             this.meadowHomePos = null;
         }
 
-        if (compoundTag.contains("FleeTargetPosX") && compoundTag.contains("FleeTargetPosY") && compoundTag.contains("FleeTargetPosZ")) {
-            this.fleeTargetPos = new BlockPos(compoundTag.getInt("FleeTargetPosX"), compoundTag.getInt("FleeTargetPosY"), compoundTag.getInt("FleeTargetPosZ"));
+        if (compoundTag.read("FleeTargetPosX", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compoundTag.read("FleeTargetPosY", com.mojang.serialization.Codec.PASSTHROUGH).isPresent() && compoundTag.read("FleeTargetPosZ", com.mojang.serialization.Codec.PASSTHROUGH).isPresent()) {
+            this.fleeTargetPos = new BlockPos(compoundTag.getIntOr("FleeTargetPosX", 0), compoundTag.getIntOr("FleeTargetPosY", 0), compoundTag.getIntOr("FleeTargetPosZ", 0));
         } else {
             this.fleeTargetPos = null;
         }

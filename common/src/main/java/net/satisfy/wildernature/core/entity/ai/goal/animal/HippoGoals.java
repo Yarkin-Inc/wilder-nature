@@ -10,7 +10,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.MoveToBlockGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
-import net.minecraft.world.entity.vehicle.Boat;
+import net.minecraft.world.entity.vehicle.boat.Boat;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
@@ -33,10 +33,10 @@ public final class HippoGoals {
 
         @Override
         public boolean canUse() {
-            if (this.hippoEntity.isInWaterOrBubble() || this.hippoEntity.isTossFeeding() || this.hippoEntity.getTarget() != null) {
+            if (this.hippoEntity.isInWater() || this.hippoEntity.isTossFeeding() || this.hippoEntity.getTarget() != null) {
                 return false;
             }
-            if (!this.hippoEntity.level().isDay()) {
+            if (!this.hippoEntity.level().isBrightOutside()) {
                 return false;
             }
             return super.canUse();
@@ -44,7 +44,7 @@ public final class HippoGoals {
 
         @Override
         public boolean canContinueToUse() {
-            if (this.hippoEntity.isInWaterOrBubble() || this.hippoEntity.isTossFeeding() || this.hippoEntity.getTarget() != null) {
+            if (this.hippoEntity.isInWater() || this.hippoEntity.isTossFeeding() || this.hippoEntity.getTarget() != null) {
                 return false;
             }
             return super.canContinueToUse();
@@ -68,7 +68,7 @@ public final class HippoGoals {
 
         @Override
         public boolean canUse() {
-            if (this.hippoEntity.isInWaterOrBubble()) return false;
+            if (this.hippoEntity.isInWater()) return false;
             if (this.hippoEntity.isTossFeeding()) return false;
             if (this.hippoEntity.getTarget() != null) return false;
             return super.canUse();
@@ -90,7 +90,7 @@ public final class HippoGoals {
                 return;
             }
 
-            if (!this.hippoEntity.isInWaterOrBubble()
+            if (!this.hippoEntity.isInWater()
                     && this.hippoEntity.onGround()
                     && this.hippoEntity.getDeltaMovement().horizontalDistanceSqr() < 1.0E-4D
                     && this.hippoEntity.getRandom().nextInt(40) == 0) {
@@ -222,7 +222,7 @@ public final class HippoGoals {
             if (distanceToTargetSqr <= attackReachSqr && this.ticksUntilNextAttack <= 0) {
                 this.ticksUntilNextAttack = this.adjustedTickDelay(20);
                 this.hippoEntity.startSnap();
-                this.hippoEntity.doHurtTarget(targetEntity);
+                this.hippoEntity.doHurtTarget((net.minecraft.server.level.ServerLevel) this.hippoEntity.level(), targetEntity);
             }
         }
 

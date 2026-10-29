@@ -2,7 +2,7 @@ package net.satisfy.wildernature.client.model.entity.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.satisfy.wildernature.client.render.state.BeaverRenderState;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -13,13 +13,14 @@ import net.satisfy.wildernature.core.entity.animal.passive.BeaverEntity;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
-public class BeaverModel<T extends BeaverEntity> extends HierarchicalModel<T> {
+public class BeaverModel<T extends BeaverRenderState> extends AnimatedAnimalModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(WilderNature.identifier("beaver"), "main");
 
     private final ModelPart root;
     private final ModelPart head;
 
     public BeaverModel(ModelPart root) {
+        super(root);
         this.root = root.getChild("root");
         ModelPart beaver = this.root.getChild("beaver");
         ModelPart torso = beaver.getChild("torso");
@@ -56,15 +57,20 @@ public class BeaverModel<T extends BeaverEntity> extends HierarchicalModel<T> {
     }
 
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity) {
+        float limbSwing = entity.walkAnimationPos;
+        float limbSwingAmount = entity.walkAnimationSpeed;
+        float ageInTicks = entity.ageInTicks;
+        float netHeadYaw = entity.yRot;
+        float headPitch = entity.xRot;
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         this.animate(entity.idleState, BeaverAnimation.idle, ageInTicks);
         this.animate(entity.walkState, BeaverAnimation.walk, ageInTicks);
         this.animate(entity.gnawState, BeaverAnimation.chew, ageInTicks);
         this.animate(entity.nodState, BeaverAnimation.nod, ageInTicks);
-        
-        
+
+
         this.animate(entity.sleepState, BeaverAnimation.sleep, ageInTicks);
 
         if (!entity.isSleeping()) {
@@ -72,13 +78,7 @@ public class BeaverModel<T extends BeaverEntity> extends HierarchicalModel<T> {
             this.head.xRot += headPitch * ((float) Math.PI / 180F) * 0.35F;
         }    }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
-        this.root.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-    }
 
-    @Override
-    public @NotNull ModelPart root() {
-        return this.root;
-    }
+
+
 }

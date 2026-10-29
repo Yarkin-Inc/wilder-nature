@@ -1,14 +1,14 @@
 package net.satisfy.wildernature.core.bounty;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.UUID;
 
-public record BountyDefinition(UUID id, BountyType type, BountyTargetType targetType, BountyCategory category, ResourceLocation targetId, int requiredAmount, BountyReward reward, boolean guildCommission) {
+public record BountyDefinition(UUID id, BountyType type, BountyTargetType targetType, BountyCategory category, Identifier targetId, int requiredAmount, BountyReward reward, boolean guildCommission) {
     public CompoundTag save() {
         CompoundTag compoundTag = new CompoundTag();
-        compoundTag.putUUID("id", this.id);
+        compoundTag.store("id", net.minecraft.core.UUIDUtil.CODEC, this.id);
         compoundTag.putString("type", this.type.getSerializedName());
         compoundTag.putString("target_type", this.targetType.getSerializedName());
         compoundTag.putString("category", this.category.getName());
@@ -21,14 +21,14 @@ public record BountyDefinition(UUID id, BountyType type, BountyTargetType target
 
     public static BountyDefinition load(CompoundTag compoundTag) {
         return new BountyDefinition(
-                compoundTag.getUUID("id"),
-                BountyType.byName(compoundTag.getString("type")),
-                BountyTargetType.byName(compoundTag.getString("target_type")),
-                BountyCategory.byName(compoundTag.getString("category")),
-                ResourceLocation.parse(compoundTag.getString("target_id")),
-                compoundTag.getInt("required_amount"),
-                BountyReward.load(compoundTag.getCompound("reward")),
-                compoundTag.getBoolean("guild_commission")
+                compoundTag.read("id", net.minecraft.core.UUIDUtil.CODEC).orElseThrow(),
+                BountyType.byName(compoundTag.getStringOr("type", "")),
+                BountyTargetType.byName(compoundTag.getStringOr("target_type", "")),
+                BountyCategory.byName(compoundTag.getStringOr("category", "")),
+                Identifier.parse(compoundTag.getStringOr("target_id", "")),
+                compoundTag.getIntOr("required_amount", 0),
+                BountyReward.load(compoundTag.getCompoundOrEmpty("reward")),
+                compoundTag.getBooleanOr("guild_commission", false)
         );
     }
 

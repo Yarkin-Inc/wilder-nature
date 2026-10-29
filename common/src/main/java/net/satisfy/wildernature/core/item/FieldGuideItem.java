@@ -6,7 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -25,7 +25,7 @@ public class FieldGuideItem extends Item {
     }
 
     @Override
-    public @NotNull InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand interactionHand) {
+    public @NotNull InteractionResult use(Level level, Player player, InteractionHand interactionHand) {
         ItemStack itemStack = player.getItemInHand(interactionHand);
 
         level.playSound(player, player.blockPosition(), SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0f, 1.0f);
@@ -35,10 +35,13 @@ public class FieldGuideItem extends Item {
             MenuRegistry.openExtendedMenu(serverPlayer, new SimpleMenuProvider(
                     (containerId, inventory, menuPlayer) -> new FieldGuideMenu(containerId, entries),
                     Component.empty()
-            ), friendlyByteBuf -> friendlyByteBuf.writeCollection(entries, (buffer, entry) -> entry.write(buffer)));
+            ), friendlyByteBuf -> {
+                friendlyByteBuf.writeVarInt(entries.size());
+                entries.forEach(entry -> entry.write(friendlyByteBuf));
+            });
         }
 
-        return InteractionResultHolder.sidedSuccess(itemStack, level.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
 }

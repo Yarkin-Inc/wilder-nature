@@ -11,20 +11,20 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ArmorRegistry {
-    private static final Map<Item, StylinPurpleHatModel<?>> models = new HashMap<>();
+    private static final Map<Item, StylinPurpleHatModel> models = new HashMap<>();
 
-    public static Model getHatModel(Item item, ModelPart baseHead) {
+    public static StylinPurpleHatModel getHatModel(Item item) {
         EntityModelSet modelSet = Minecraft.getInstance().getEntityModels();
-        StylinPurpleHatModel<?> model = models.computeIfAbsent(item, key -> {
+        StylinPurpleHatModel model = models.computeIfAbsent(item, key -> {
             if (key == ObjectRegistry.STYLIN_PURPLE_HAT.get()) {
-                return new StylinPurpleHatModel<>(modelSet.bakeLayer(StylinPurpleHatModel.LAYER_LOCATION));
+                return new StylinPurpleHatModel(modelSet.bakeLayer(StylinPurpleHatModel.LAYER_LOCATION));
             } else {
                 return null;
             }
         });
 
         assert model != null;
-        model.copyHead(baseHead);
+
 
         return model;
     }

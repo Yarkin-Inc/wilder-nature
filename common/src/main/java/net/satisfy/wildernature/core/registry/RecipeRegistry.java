@@ -11,7 +11,7 @@ public class RecipeRegistry {
 
     private static final DeferredRegister<RecipeSerializer<?>> SERIALIZERS = DeferredRegister.create(WilderNature.MOD_ID, Registries.RECIPE_SERIALIZER);
 
-    public static final RegistrySupplier<RecipeSerializer<?>> TRUFFLING = SERIALIZERS.register("truffling", TrufflingRecipe.Serializer::new);
+    public static final RegistrySupplier<RecipeSerializer<TrufflingRecipe>> TRUFFLING = SERIALIZERS.register("truffling", () -> new RecipeSerializer<>(TrufflingRecipe.CODEC, TrufflingRecipe.STREAM_CODEC));
 
 
     public static void init() {

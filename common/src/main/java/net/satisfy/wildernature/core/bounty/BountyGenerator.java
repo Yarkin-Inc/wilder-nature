@@ -6,7 +6,7 @@ import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
@@ -35,16 +35,16 @@ public final class BountyGenerator {
         List<BountyDefinition.BountyType> typePool = createTypePool();
         Collections.shuffle(typePool, new Random(randomSource.nextLong()));
 
-        EnumMap<BountyCategory, List<ResourceLocation>> huntEntityPoolByCategory = new EnumMap<>(BountyCategory.class);
-        EnumMap<BountyCategory, List<ResourceLocation>> observeEntityPoolByCategory = new EnumMap<>(BountyCategory.class);
+        EnumMap<BountyCategory, List<Identifier>> huntEntityPoolByCategory = new EnumMap<>(BountyCategory.class);
+        EnumMap<BountyCategory, List<Identifier>> observeEntityPoolByCategory = new EnumMap<>(BountyCategory.class);
 
         for (BountyCategory bountyCategory : BountyCategory.values()) {
             huntEntityPoolByCategory.put(bountyCategory, getEntitiesForCategory(serverLevel, bountyCategory, randomSource));
             observeEntityPoolByCategory.put(bountyCategory, getEntitiesForCategory(serverLevel, bountyCategory, randomSource));
         }
 
-        List<ResourceLocation> gatherItemPool = getGatherItems(randomSource);
-        List<ResourceLocation> exploreBiomePool = getExploreBiomes(serverLevel, randomSource);
+        List<Identifier> gatherItemPool = getGatherItems(randomSource);
+        List<Identifier> exploreBiomePool = getExploreBiomes(serverLevel, randomSource);
 
         Set<String> usedTargets = new HashSet<>();
         List<BountyDefinition> generatedBounties = new ArrayList<>();
@@ -52,11 +52,11 @@ public final class BountyGenerator {
         for (int index = 0; index < dailyBountyCount; index++) {
             BountyDefinition.BountyType selectedType = typePool.get(index);
             BountyCategory selectedCategory = getCategoryForType(selectedType, randomSource);
-            ResourceLocation selectedTargetId = getNextTargetId(selectedType, selectedCategory, huntEntityPoolByCategory, observeEntityPoolByCategory, gatherItemPool, exploreBiomePool, usedTargets, randomSource);
+            Identifier selectedTargetId = getNextTargetId(selectedType, selectedCategory, huntEntityPoolByCategory, observeEntityPoolByCategory, gatherItemPool, exploreBiomePool, usedTargets, randomSource);
             BountyDefinition.BountyTargetType targetType = getTargetType(selectedType);
             int requiredAmount = getRequiredAmount(selectedType, selectedCategory, randomSource);
             int experienceReward = scaleExperience(getRandomExperienceReward(selectedType, selectedCategory, requiredAmount, randomSource));
-            ResourceLocation lootTableId = switch (selectedType) {
+            Identifier lootTableId = switch (selectedType) {
                 case HUNT -> selectedCategory == BountyCategory.BOSS ? WilderNature.identifier("bounty/elite_bounty") : WilderNature.identifier("bounty/tracking_order");
                 case GATHER -> WilderNature.identifier("bounty/provision_request");
                 case OBSERVE -> WilderNature.identifier("bounty/field_notes");
@@ -76,8 +76,8 @@ public final class BountyGenerator {
 
             for (int index = 0; index < count; index++) {
                 GuildCommissionDefinition commission = guildCommissions.get(index);
-                ResourceLocation lootTableId = WilderNature.identifier("bounty/guild_commission");
-                ItemStack previewStack = new ItemStack(BuiltInRegistries.ITEM.get(commission.rewardItem()), commission.rewardCount());
+                Identifier lootTableId = WilderNature.identifier("bounty/guild_commission");
+                ItemStack previewStack = new ItemStack(BuiltInRegistries.ITEM.getValue(commission.rewardItem()), commission.rewardCount());
 
                 generatedBounties.add(new BountyDefinition(commission.id(), commission.type(), getTargetType(commission.type()), BountyCategory.NEUTRAL, commission.target(), commission.amount(), new BountyReward(lootTableId, scaleExperience(commission.rewardXp()), BuiltInRegistries.ITEM.getKey(previewStack.getItem()), previewStack.getCount()), true));
             }
@@ -86,7 +86,7 @@ public final class BountyGenerator {
         return generatedBounties;
     }
 
-    private static ItemStack resolveRewardPreviewStack(ServerLevel serverLevel, ResourceLocation lootTableId) {
+    private static ItemStack resolveRewardPreviewStack(ServerLevel serverLevel, Identifier lootTableId) {
         LootTable lootTable = serverLevel.getServer()
                 .reloadableRegistries()
                 .getLootTable(ResourceKey.create(Registries.LOOT_TABLE, lootTableId));
@@ -97,14 +97,14 @@ public final class BountyGenerator {
 
         ItemEntity previewEntity = new ItemEntity(
                 serverLevel,
-                serverLevel.getSharedSpawnPos().getX(),
-                serverLevel.getSharedSpawnPos().getY(),
-                serverLevel.getSharedSpawnPos().getZ(),
+                serverLevel.getRespawnData().pos().getX(),
+                serverLevel.getRespawnData().pos().getY(),
+                serverLevel.getRespawnData().pos().getZ(),
                 ItemStack.EMPTY
         );
 
         LootParams lootParams = new LootParams.Builder(serverLevel)
-                .withParameter(LootContextParams.ORIGIN, serverLevel.getSharedSpawnPos().getCenter())
+                .withParameter(LootContextParams.ORIGIN, net.minecraft.world.phys.Vec3.atCenterOf(serverLevel.getRespawnData().pos()))
                 .withParameter(LootContextParams.THIS_ENTITY, previewEntity)
                 .create(LootContextParamSets.GIFT);
 
@@ -176,15 +176,15 @@ public final class BountyGenerator {
         };
     }
 
-    private static ResourceLocation getNextTargetId(BountyDefinition.BountyType bountyType, BountyCategory bountyCategory, EnumMap<BountyCategory, List<ResourceLocation>> huntEntityPoolByCategory, EnumMap<BountyCategory, List<ResourceLocation>> observeEntityPoolByCategory, List<ResourceLocation> gatherItemPool, List<ResourceLocation> exploreBiomePool, Set<String> usedTargets, RandomSource randomSource) {
-        List<ResourceLocation> pool = switch (bountyType) {
+    private static Identifier getNextTargetId(BountyDefinition.BountyType bountyType, BountyCategory bountyCategory, EnumMap<BountyCategory, List<Identifier>> huntEntityPoolByCategory, EnumMap<BountyCategory, List<Identifier>> observeEntityPoolByCategory, List<Identifier> gatherItemPool, List<Identifier> exploreBiomePool, Set<String> usedTargets, RandomSource randomSource) {
+        List<Identifier> pool = switch (bountyType) {
             case HUNT -> huntEntityPoolByCategory.get(bountyCategory);
             case OBSERVE -> observeEntityPoolByCategory.get(bountyCategory);
             case GATHER -> gatherItemPool;
             case EXPLORE -> exploreBiomePool;
         };
 
-        for (ResourceLocation targetId : pool) {
+        for (Identifier targetId : pool) {
             String key = bountyType.getSerializedName() + ":" + targetId;
             if (!usedTargets.contains(key)) {
                 return targetId;
@@ -198,25 +198,25 @@ public final class BountyGenerator {
         return getFallbackTarget(bountyType, bountyCategory);
     }
 
-    private static ResourceLocation getFallbackTarget(BountyDefinition.BountyType bountyType, BountyCategory bountyCategory) {
+    private static Identifier getFallbackTarget(BountyDefinition.BountyType bountyType, BountyCategory bountyCategory) {
         return switch (bountyType) {
             case HUNT, OBSERVE -> getFallbackEntity(bountyCategory);
             case GATHER -> BuiltInRegistries.ITEM.getKey(Items.STONE);
-            case EXPLORE -> ResourceLocation.withDefaultNamespace("plains");
+            case EXPLORE -> Identifier.withDefaultNamespace("plains");
         };
     }
 
-    private static List<ResourceLocation> getEntitiesForCategory(ServerLevel serverLevel, BountyCategory bountyCategory, RandomSource randomSource) {
+    private static List<Identifier> getEntitiesForCategory(ServerLevel serverLevel, BountyCategory bountyCategory, RandomSource randomSource) {
         HolderSet.Named<EntityType<?>> entityTag = serverLevel.registryAccess()
                 .lookupOrThrow(Registries.ENTITY_TYPE)
                 .get(bountyCategory.getEntityTag())
                 .orElse(null);
 
-        List<ResourceLocation> entityIds = new ArrayList<>();
+        List<Identifier> entityIds = new ArrayList<>();
 
         if (entityTag != null && entityTag.size() > 0) {
             for (Holder<EntityType<?>> entityHolder : entityTag) {
-                entityHolder.unwrapKey().ifPresent(entityTypeKey -> entityIds.add(entityTypeKey.location()));
+                entityHolder.unwrapKey().ifPresent(entityTypeKey -> entityIds.add(entityTypeKey.identifier()));
             }
         }
 
@@ -228,8 +228,8 @@ public final class BountyGenerator {
         return entityIds;
     }
 
-    private static List<ResourceLocation> getGatherItems(RandomSource randomSource) {
-        List<ResourceLocation> itemIds = new ArrayList<>();
+    private static List<Identifier> getGatherItems(RandomSource randomSource) {
+        List<Identifier> itemIds = new ArrayList<>();
         itemIds.add(BuiltInRegistries.ITEM.getKey(Items.STONE));
         itemIds.add(BuiltInRegistries.ITEM.getKey(Items.COBBLESTONE));
         itemIds.add(BuiltInRegistries.ITEM.getKey(Items.OAK_LOG));
@@ -246,8 +246,8 @@ public final class BountyGenerator {
         return itemIds;
     }
 
-    private static List<ResourceLocation> getExploreBiomes(ServerLevel serverLevel, RandomSource randomSource) {
-        List<ResourceLocation> biomeIds = new ArrayList<>();
+    private static List<Identifier> getExploreBiomes(ServerLevel serverLevel, RandomSource randomSource) {
+        List<Identifier> biomeIds = new ArrayList<>();
 
         addBiomeIfPresent(serverLevel, biomeIds, "plains");
         addBiomeIfPresent(serverLevel, biomeIds, "forest");
@@ -261,26 +261,26 @@ public final class BountyGenerator {
         addBiomeIfPresent(serverLevel, biomeIds, "desert");
 
         if (biomeIds.isEmpty()) {
-            biomeIds.add(ResourceLocation.withDefaultNamespace("plains"));
+            biomeIds.add(Identifier.withDefaultNamespace("plains"));
         }
 
         Collections.shuffle(biomeIds, new Random(randomSource.nextLong()));
         return biomeIds;
     }
 
-    private static void addBiomeIfPresent(ServerLevel serverLevel, List<ResourceLocation> biomeIds, String biomeName) {
-        ResourceLocation biomeId = ResourceLocation.withDefaultNamespace(biomeName);
+    private static void addBiomeIfPresent(ServerLevel serverLevel, List<Identifier> biomeIds, String biomeName) {
+        Identifier biomeId = Identifier.withDefaultNamespace(biomeName);
         if (serverLevel.registryAccess().lookupOrThrow(Registries.BIOME).get(ResourceKey.create(Registries.BIOME, biomeId)).isPresent()) {
             biomeIds.add(biomeId);
         }
     }
 
-    private static ResourceLocation getFallbackEntity(BountyCategory bountyCategory) {
+    private static Identifier getFallbackEntity(BountyCategory bountyCategory) {
         return switch (bountyCategory) {
-            case NEUTRAL -> ResourceLocation.withDefaultNamespace("pig");
-            case DEFENSIVE -> ResourceLocation.withDefaultNamespace("goat");
-            case AGGRESSIVE -> ResourceLocation.withDefaultNamespace("zombie");
-            case BOSS -> ResourceLocation.withDefaultNamespace("warden");
+            case NEUTRAL -> Identifier.withDefaultNamespace("pig");
+            case DEFENSIVE -> Identifier.withDefaultNamespace("goat");
+            case AGGRESSIVE -> Identifier.withDefaultNamespace("zombie");
+            case BOSS -> Identifier.withDefaultNamespace("warden");
         };
     }
 

@@ -1,5 +1,7 @@
 package net.satisfy.wildernature.core.entity.animal.defensive;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -71,7 +73,7 @@ public class CassowaryEntity extends Animal {
     }
 
     public static AttributeSupplier.@NotNull Builder createMobAttributes() {
-        return Animal.createLivingAttributes()
+        return net.minecraft.world.entity.animal.Animal.createAnimalAttributes()
                 .add(Attributes.MAX_HEALTH, 16.0D)
                 .add(Attributes.FOLLOW_RANGE, 24.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.26D)
@@ -92,7 +94,7 @@ public class CassowaryEntity extends Animal {
                     this.attackHitPending = false;
                     Entity currentTarget = this.getTarget();
                     if (currentTarget != null && currentTarget.isAlive() && this.distanceToSqr(currentTarget) <= 6.25D) {
-                        this.doHurtTarget(currentTarget);
+                        this.doHurtTarget((net.minecraft.server.level.ServerLevel) this.level(), currentTarget);
                     }
                 }
 
@@ -269,7 +271,7 @@ public class CassowaryEntity extends Animal {
     @Override
     protected void updateWalkAnimation(float partialTick) {
         float walkSpeed = this.getPose() == Pose.STANDING ? Math.min(partialTick * 6.0F, 1.0F) : 0.0F;
-        this.walkAnimation.update(walkSpeed, 0.2F);
+        this.walkAnimation.update(walkSpeed, 0.2F, 1.0F);
     }
 
     public boolean isAttacking() {
@@ -377,19 +379,19 @@ public class CassowaryEntity extends Animal {
     }
 
     @Override
-    public boolean doHurtTarget(Entity entity) {
-        boolean success = super.doHurtTarget(entity);
+    public boolean doHurtTarget(net.minecraft.server.level.ServerLevel serverLevel, Entity entity) {
+        boolean success = super.doHurtTarget(serverLevel, entity);
 
         if (success && entity instanceof Player player) {
-            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20, 0));
+            player.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 20, 0));
         }
 
         return success;
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float damageAmount) {
-        boolean wasHurt = super.hurt(damageSource, damageAmount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float damageAmount) {
+        boolean wasHurt = super.hurtServer(serverLevel, damageSource, damageAmount);
         if (wasHurt) {
             Entity sourceEntity = damageSource.getEntity();
             if (sourceEntity instanceof Player player && this.isValidTargetPlayer(player)) {
@@ -418,7 +420,7 @@ public class CassowaryEntity extends Animal {
 
     @Override
     protected void playStepSound(BlockPos blockPos, BlockState blockState) {
-        this.playSound(SoundEvents.CHICKEN_STEP, 0.15F, 1.0F);
+        this.playSound(SoundEvents.CHICKEN_STEP.value(), 0.15F, 1.0F);
     }
 
     @Override
@@ -430,7 +432,7 @@ public class CassowaryEntity extends Animal {
     @Override
     @Nullable
     public CassowaryEntity getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return EntityTypeRegistry.CASSOWARY.get().create(serverLevel);
+        return EntityTypeRegistry.CASSOWARY.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -439,7 +441,7 @@ public class CassowaryEntity extends Animal {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
+    public void addAdditionalSaveData(ValueOutput compound) {
         super.addAdditionalSaveData(compound);
         compound.putBoolean("Attacking", this.isAttacking());
         compound.putBoolean("Alert", this.isAlert());
@@ -455,19 +457,19 @@ public class CassowaryEntity extends Animal {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
+    public void readAdditionalSaveData(ValueInput compound) {
         super.readAdditionalSaveData(compound);
-        this.setAttacking(compound.getBoolean("Attacking"));
-        this.setAlert(compound.getBoolean("Alert"));
-        this.setThreatening(compound.getBoolean("Threatening"));
-        this.attackAnimationTicks = compound.getInt("AttackAnimationTicks");
-        this.alertTicks = compound.getInt("AlertTicks");
-        this.threateningTicks = compound.getInt("ThreateningTicks");
-        this.calmDownTicks = compound.getInt("CalmDownTicks");
-        this.babyProtectCacheTicks = compound.getInt("BabyProtectCacheTicks");
-        this.nearbyBabyCached = compound.getBoolean("NearbyBabyCached");
-        this.threatSoundCooldownTicks = compound.getInt("ThreatSoundCooldownTicks");
-        this.attackHitPending = compound.getBoolean("AttackHitPending");
+        this.setAttacking(compound.getBooleanOr("Attacking", false));
+        this.setAlert(compound.getBooleanOr("Alert", false));
+        this.setThreatening(compound.getBooleanOr("Threatening", false));
+        this.attackAnimationTicks = compound.getIntOr("AttackAnimationTicks", 0);
+        this.alertTicks = compound.getIntOr("AlertTicks", 0);
+        this.threateningTicks = compound.getIntOr("ThreateningTicks", 0);
+        this.calmDownTicks = compound.getIntOr("CalmDownTicks", 0);
+        this.babyProtectCacheTicks = compound.getIntOr("BabyProtectCacheTicks", 0);
+        this.nearbyBabyCached = compound.getBooleanOr("NearbyBabyCached", false);
+        this.threatSoundCooldownTicks = compound.getIntOr("ThreatSoundCooldownTicks", 0);
+        this.attackHitPending = compound.getBooleanOr("AttackHitPending", false);
         this.setAttacking(this.attackAnimationTicks > 0);
     }
 }
